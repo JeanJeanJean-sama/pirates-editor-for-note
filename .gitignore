@@ -2,8 +2,8 @@ node_modules/
 *.zip
 *.csv
 *.json.bak
-pen-backup-*.json
-pen-move-*.json
+/pen-backup-*.json
+/pen-move-*.json
 .DS_Store
 Thumbs.db
 desktop.ini
