@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<!-- Pirates’ Editor for note (Pen) / Jean=Summer / icon 16 (simple) -->
+<defs><linearGradient id="pen-g" gradientUnits="userSpaceOnUse" x1="14" y1="86" x2="86" y2="14"><stop offset="0" stop-color="#14c3ea"/><stop offset="0.5" stop-color="#3a7df6"/><stop offset="1" stop-color="#7b57f2"/></linearGradient></defs>
+<rect width="100" height="100" rx="22" fill="#fff"/>
+<circle cx="50" cy="50" r="31" fill="none" stroke="url(#pen-g)" stroke-width="12"/>
+<path d="M50,4L58,42L96,50L58,58L50,96L42,58L4,50L42,42Z" fill="url(#pen-g)" stroke="#fff" stroke-width="4" paint-order="stroke"/>
+</svg>

@@ -1,0 +1,364 @@
+/* ============================================================
+ * perks.js — 称号と着せ替え（ダッシュボード側）
+ *
+ * ・作者ジァン=サマー（@jeanjeanjean）をフォローすると使える
+ * ・彼の記事へのスキ／コメント／引用で、特別な称号と着せ替えが増える
+ * ・「海賊王」は @jeanjeanjean 本人だけ
+ * ・判定の元データは perk-collect.js（note.com上で確認）と、Penに記録した本文
+ * ============================================================ */
+(() => {
+  'use strict';
+  const CAPTAIN = 'jeanjeanjean';
+  const CAPTAIN_NAME = 'ジァン=サマー';
+  const QUOTE_RE = /note\.com\/jeanjeanjean\/n\/n[0-9a-z]+/i;
+  const MAX_TITLE = 16;
+  const MAX_EPITHET = 12;
+  /** 二つ名の候補（v0.6.0 ⑧）。作品の固有の呼び名は並べず、一般的な言葉だけにする（2026/9/29 利用者が決定） */
+  const EPITHET_IDEAS = ['鉄壁の', '暴君', '大参謀', '鉄拳の', '道化の', '泥棒猫', '船斬り'];
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const isWeb = () => self.PEN_ENV === 'web';
+  /** Pen のロゴ（コンパス。brand/pen-logo.svg と同じ形。v0.6.0） */
+  const LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Pen"><defs><linearGradient id="pen-g" gradientUnits="userSpaceOnUse" x1="14" y1="86" x2="86" y2="14"><stop offset="0" stop-color="#14c3ea"/><stop offset="0.5" stop-color="#3a7df6"/><stop offset="1" stop-color="#7b57f2"/></linearGradient></defs><path fill="url(#pen-g)" d="M46.07,10.09L44.36,10.30L42.90,10.53L41.45,10.82L39.78,11.22L38.36,11.63L36.72,12.16L35.34,12.68L33.75,13.34L32.19,14.07L30.88,14.75L29.38,15.61L28.13,16.39L26.71,17.36L25.52,18.24L24.18,19.32L22.98,20.37L26.71,23.21L27.82,22.28L28.85,21.49L29.92,20.73L31.19,19.89L32.50,19.11L33.65,18.49L34.82,17.91L36.01,17.37L37.43,16.80L38.66,16.36L39.90,15.97L41.16,15.62L42.43,15.32L43.93,15.02L45.22,14.82L46.67,14.66L47.48,9.98ZM55.25,33.50L50.00,3.00L44.75,33.50ZM28.01,30.87L27.13,31.93L26.59,32.64L25.96,33.51L25.47,34.25L24.91,35.17L24.46,35.94L23.96,36.89L23.57,37.70L23.21,38.52L22.80,39.51L22.49,40.35L22.21,41.20L21.91,42.23L21.68,43.09L21.48,43.96L21.28,45.00L24.14,44.45L24.34,43.57L24.60,42.63L24.88,41.70L25.21,40.78L25.56,39.88L25.95,38.99L26.37,38.11L26.83,37.25L27.31,36.40L27.83,35.58L28.37,34.77L28.95,33.98L29.55,33.22L30.19,32.48L30.84,31.76L31.53,31.07L32.24,30.40L32.97,29.76L33.73,29.15L34.51,28.56L35.31,28.01L36.12,27.48L36.96,26.99L37.82,26.52L38.69,26.09L39.58,25.69L40.48,25.32L41.40,24.99L42.32,24.69L43.26,24.42L44.20,24.19L45.06,24.01L45.55,21.19L44.66,21.34L43.61,21.56L42.57,21.81L41.54,22.11L40.69,22.38L39.68,22.74L38.68,23.14L37.70,23.57L36.89,23.96L35.94,24.46L35.01,25.00L34.10,25.57L33.22,26.17L32.49,26.69L31.65,27.35L30.87,28.01L18.89,18.89ZM19.32,24.18L18.39,25.33L17.36,26.71L16.52,27.93L15.73,29.17L14.87,30.66L14.18,31.97L13.44,33.53L12.86,34.88L12.33,36.26L11.77,37.89L11.29,39.54L10.93,40.97L10.58,42.66L10.33,44.12L10.14,45.58L10.00,47.15L14.70,46.25L14.88,44.79L15.10,43.50L15.36,42.22L15.67,40.95L16.03,39.69L16.50,38.25L16.96,37.02L17.46,35.81L18.10,34.43L18.69,33.27L19.33,32.12L20.01,31.01L20.73,29.92L21.49,28.85L22.28,27.82L23.21,26.71L20.37,22.98ZM37.95,50.47L38.38,50.37L38.79,50.23L39.18,50.08L39.43,49.96L39.82,49.75L40.33,49.40L40.68,49.12L40.89,48.92L41.18,48.60L41.35,48.38L41.58,48.03L41.79,47.64L41.97,47.23L42.07,46.96L42.19,46.53L42.27,46.09L42.31,45.79L42.33,45.48L42.34,45.01L42.31,44.54L42.28,44.23L42.20,43.79L42.08,43.36L41.94,42.95L41.83,42.69L41.63,42.30L41.47,42.05L41.21,41.68L40.90,41.35L40.57,41.04L40.06,40.67L39.50,40.34L39.00,40.12L38.48,39.95L37.92,39.81L37.47,39.73L37.01,39.68L36.19,39.63L29.23,39.63L29.23,56.84L33.42,56.84L33.42,50.66L36.36,50.66L37.19,50.60ZM37.68,46.54L37.59,46.66L37.39,46.85L37.18,46.99L36.94,47.11L36.68,47.21L36.38,47.27L36.05,47.31L35.70,47.33L33.42,47.33L33.42,43.01L35.70,43.01L36.05,43.03L36.38,43.07L36.68,43.13L36.94,43.23L37.07,43.28L37.39,43.49L37.59,43.68L37.76,43.92L37.90,44.19L38.00,44.48L38.06,44.81L38.07,45.17L38.06,45.53L38.03,45.70L37.95,46.01L37.84,46.29ZM55.95,47.78L55.79,47.22L55.52,46.55L55.32,46.18L55.16,45.91L54.82,45.42L54.63,45.19L54.23,44.76L54.01,44.56L53.54,44.19L53.17,43.95L52.90,43.80L52.38,43.54L51.68,43.29L51.10,43.14L50.34,43.02L49.70,42.97L48.89,42.98L48.12,43.05L47.38,43.20L46.69,43.41L46.15,43.63L45.77,43.82L45.50,43.98L45.00,44.32L44.65,44.61L44.43,44.81L44.02,45.25L43.66,45.74L43.33,46.27L43.03,46.91L42.83,47.44L42.75,47.72L42.65,48.15L42.57,48.59L42.48,49.36L42.46,50.16L42.51,50.96L42.55,51.26L42.65,51.85L42.84,52.56L42.98,52.96L43.28,53.60L43.59,54.13L43.76,54.38L44.04,54.75L44.45,55.19L44.90,55.59L45.40,55.94L45.66,56.10L46.18,56.37L46.57,56.54L47.12,56.73L47.55,56.84L47.98,56.92L48.28,56.97L48.90,57.02L49.21,57.03L49.69,57.03L50.30,56.99L50.89,56.90L51.46,56.76L52.13,56.53L52.67,56.29L53.20,55.99L53.68,55.65L54.13,55.27L54.54,54.84L54.92,54.36L55.09,54.11L55.39,53.58L55.64,53.03L55.74,52.75L55.87,52.30L51.41,52.30L51.26,52.58L51.00,52.94L50.89,53.04L50.68,53.22L50.43,53.37L50.03,53.53L49.72,53.59L49.23,53.63L48.76,53.59L48.33,53.48L47.93,53.30L47.56,53.05L47.26,52.75L47.01,52.40L46.83,51.99L46.70,51.52L46.63,51.01L56.12,51.01L56.16,50.53L56.19,49.78L56.17,49.13L56.10,48.51ZM46.87,47.89L47.07,47.48L47.24,47.25L47.55,46.94L47.90,46.69L48.29,46.50L48.71,46.38L49.01,46.34L49.33,46.32L49.82,46.36L50.12,46.42L50.41,46.51L50.68,46.63L50.93,46.78L51.16,46.96L51.37,47.17L51.55,47.39L51.69,47.64L51.74,47.77L51.86,48.20L51.90,48.68L46.65,48.68L46.76,48.18ZM27.98,45.04L2.00,50.00L27.98,54.96ZM10.12,54.18L10.30,55.64L10.58,57.34L10.93,59.03L11.29,60.46L11.70,61.88L12.24,63.51L12.86,65.12L13.44,66.47L14.07,67.81L14.87,69.34L15.73,70.83L16.52,72.07L17.36,73.29L18.39,74.67L19.32,75.82L20.37,77.02L23.21,73.29L22.28,72.18L21.49,71.15L20.73,70.08L20.01,68.99L19.22,67.69L18.59,66.54L18.00,65.37L17.46,64.19L16.96,62.98L16.50,61.75L16.09,60.51L15.67,59.05L15.36,57.78L15.10,56.50L14.88,55.21L14.70,53.75L10.00,52.85ZM21.52,56.21L21.72,57.08L22.00,58.12L22.27,58.97L22.55,59.82L22.87,60.66L23.21,61.48L23.57,62.30L23.96,63.11L24.38,63.90L24.82,64.68L25.28,65.44L25.76,66.19L26.27,66.93L26.80,67.65L27.35,68.35L28.01,69.13L18.89,81.11L30.87,71.99L31.65,72.65L32.49,73.31L33.22,73.83L34.10,74.43L35.01,75.00L35.94,75.54L36.73,75.96L37.70,76.43L38.52,76.79L39.51,77.20L40.52,77.56L41.54,77.89L42.57,78.19L43.61,78.44L44.66,78.66L45.55,78.81L45.06,75.99L44.20,75.81L43.26,75.58L42.32,75.31L41.40,75.01L40.63,74.74L39.73,74.37L38.84,73.98L37.96,73.55L37.25,73.17L36.40,72.69L35.58,72.17L34.77,71.63L34.11,71.15L33.35,70.55L32.60,69.92L31.88,69.27L31.18,68.59L30.51,67.88L29.87,67.15L29.25,66.40L28.66,65.63L28.10,64.83L27.48,63.88L26.99,63.04L26.52,62.18L26.09,61.31L25.69,60.42L25.26,59.37L24.94,58.45L24.64,57.52L24.38,56.58L24.14,55.55L21.28,55.00ZM23.99,80.52L25.14,81.46L26.51,82.50L27.93,83.48L29.17,84.27L30.45,85.01L31.97,85.82L33.53,86.56L34.88,87.14L36.49,87.76L37.89,88.23L39.30,88.65L40.97,89.07L42.66,89.42L44.12,89.67L45.82,89.88L47.48,90.02L46.67,85.34L45.22,85.18L43.93,84.98L42.65,84.73L41.16,84.38L39.69,83.97L38.45,83.57L37.22,83.12L36.01,82.63L34.82,82.09L33.65,81.51L32.31,80.78L31.19,80.11L30.10,79.40L28.85,78.51L27.82,77.72L26.71,76.79L22.98,79.63ZM75.82,19.32L74.48,18.24L73.29,17.36L71.87,16.39L70.62,15.61L69.34,14.87L67.81,14.07L66.25,13.34L64.89,12.77L63.28,12.16L61.88,11.70L60.22,11.22L58.79,10.87L57.34,10.58L55.64,10.30L54.18,10.12L52.52,9.98L53.33,14.66L54.78,14.82L56.07,15.02L57.57,15.32L58.84,15.62L60.10,15.97L61.34,16.36L62.78,16.88L63.99,17.37L65.18,17.91L66.35,18.49L67.69,19.22L68.81,19.89L69.90,20.60L71.15,21.49L72.18,22.28L73.29,23.21L77.02,20.37ZM69.13,28.01L68.35,27.35L67.51,26.69L66.64,26.06L65.75,25.47L64.83,24.91L64.06,24.46L63.11,23.96L62.14,23.50L61.16,23.07L60.16,22.68L59.14,22.32L58.29,22.05L57.26,21.77L56.39,21.56L55.34,21.34L54.45,21.19L54.94,24.01L55.80,24.19L56.74,24.42L57.68,24.69L58.60,24.99L59.52,25.32L60.42,25.69L61.31,26.09L62.18,26.52L63.04,26.99L63.88,27.48L64.69,28.01L65.49,28.56L66.27,29.15L67.03,29.76L67.76,30.40L68.47,31.07L69.16,31.76L69.81,32.48L70.45,33.22L71.05,33.98L71.63,34.77L72.17,35.58L72.69,36.40L73.17,37.25L73.63,38.11L74.05,38.99L74.44,39.88L74.79,40.78L75.12,41.70L75.40,42.63L75.66,43.57L75.86,44.45L78.72,45.00L78.52,43.96L78.32,43.09L78.05,42.05L77.79,41.20L77.51,40.35L77.13,39.34L76.72,38.35L76.35,37.54L75.96,36.73L75.45,35.79L74.91,34.86L74.43,34.10L73.83,33.22L73.31,32.49L72.65,31.65L71.99,30.87L81.11,18.89ZM89.86,45.58L89.67,44.12L89.38,42.42L89.07,40.97L88.65,39.30L88.23,37.89L87.76,36.49L87.14,34.88L86.56,33.53L85.93,32.19L85.13,30.66L84.27,29.17L83.48,27.93L82.64,26.71L81.61,25.33L80.68,24.18L79.63,22.98L76.79,26.71L77.72,27.82L78.51,28.85L79.27,29.92L79.99,31.01L80.78,32.31L81.41,33.46L82.00,34.63L82.54,35.81L83.12,37.22L83.57,38.45L83.97,39.69L84.33,40.95L84.64,42.22L84.90,43.50L85.12,44.79L85.30,46.25L90.00,47.15ZM71.43,45.56L71.59,45.98L71.72,46.40L71.81,46.77L71.92,47.37L71.98,47.92L72.02,48.50L72.02,54.96L98.00,50.00L71.08,44.86L71.23,45.13ZM70.52,46.77L70.39,46.35L70.29,46.08L70.12,45.70L69.91,45.33L69.69,44.99L69.43,44.67L69.14,44.36L68.93,44.17L68.71,43.99L68.36,43.75L67.99,43.55L67.60,43.38L67.19,43.24L66.76,43.13L66.30,43.06L65.83,43.02L65.35,43.02L64.88,43.04L64.44,43.10L64.01,43.20L63.60,43.32L63.21,43.48L62.80,43.69L62.53,43.85L62.17,44.12L61.84,44.41L61.63,44.63L61.36,44.97L61.36,43.16L57.17,43.16L57.17,56.84L61.36,56.84L61.36,49.41L61.39,48.89L61.48,48.41L61.62,47.99L61.82,47.61L62.07,47.28L62.40,46.99L62.77,46.77L63.19,46.62L63.65,46.53L63.98,46.52L64.32,46.53L64.78,46.62L65.20,46.77L65.57,46.99L65.90,47.28L66.15,47.61L66.35,47.99L66.49,48.41L66.58,48.89L66.61,49.41L66.61,56.84L70.77,56.84L70.77,48.50L70.74,48.00L70.68,47.52L70.59,47.06ZM80.68,75.82L81.61,74.67L82.50,73.49L83.48,72.07L84.27,70.83L85.01,69.55L85.82,68.03L86.56,66.47L87.14,65.12L87.76,63.51L88.23,62.11L88.65,60.70L89.07,59.03L89.42,57.34L89.67,55.88L89.86,54.42L90.00,52.85L85.30,53.75L85.12,55.21L84.90,56.50L84.64,57.78L84.33,59.05L83.97,60.31L83.57,61.55L83.12,62.78L82.54,64.19L81.90,65.57L81.31,66.73L80.67,67.88L79.99,68.99L79.27,70.08L78.51,71.15L77.72,72.18L76.79,73.29L79.63,77.02ZM55.51,78.62L56.39,78.44L57.26,78.23L58.12,78.00L59.14,77.68L60.16,77.32L60.99,77.00L61.98,76.58L62.79,76.20L63.58,75.79L64.37,75.36L65.14,74.91L66.05,74.34L66.93,73.73L67.65,73.20L68.35,72.65L69.13,71.99L81.11,81.11L71.99,69.13L72.65,68.35L73.31,67.51L73.83,66.78L74.43,65.90L74.91,65.14L75.45,64.21L75.96,63.27L76.35,62.46L76.72,61.65L77.13,60.66L77.51,59.65L77.79,58.80L78.05,57.95L78.32,56.91L78.52,56.04L78.72,55.00L75.86,55.55L75.66,56.43L75.40,57.37L75.12,58.30L74.79,59.22L74.44,60.12L74.05,61.01L73.70,61.75L73.25,62.61L72.85,63.32L72.35,64.15L71.81,64.96L71.24,65.76L70.65,66.53L70.13,67.15L69.49,67.88L68.82,68.59L68.12,69.27L67.40,69.92L66.65,70.55L65.89,71.15L65.10,71.72L64.29,72.26L63.46,72.77L62.47,73.33L61.60,73.77L60.72,74.18L59.82,74.56L58.76,74.96L57.83,75.26L56.90,75.53L55.95,75.77L54.94,75.99L54.45,78.81ZM50.00,97.00L55.25,66.50L44.75,66.50ZM54.18,89.88L55.88,89.67L57.34,89.42L59.03,89.07L60.46,88.71L61.88,88.30L63.51,87.76L65.12,87.14L66.47,86.56L68.03,85.82L69.34,85.13L70.83,84.27L72.07,83.48L73.29,82.64L74.67,81.61L75.82,80.68L77.02,79.63L73.29,76.79L72.18,77.72L71.15,78.51L70.08,79.27L68.81,80.11L67.69,80.78L66.54,81.41L65.18,82.09L63.99,82.63L62.57,83.20L61.34,83.64L60.10,84.03L58.84,84.38L57.35,84.73L56.07,84.98L54.78,85.18L53.33,85.34L52.52,90.02Z"/></svg>';
+
+  /* ---------- 称号 ---------- */
+  const GROUPS = [
+    { name: '海賊', titles: ['見習い水夫', '甲板員', '見張り番', '砲撃手', '狙撃手', '操舵手', '航海士', '船医', 'コック', '音楽家', '考古学者', '船大工', '副船長', '船長', '大海賊', '伝説の海賊'] },
+    { name: '海軍', titles: ['海軍二等兵', '海軍軍曹', '海軍少尉', '海軍大尉', '海軍大佐', '海軍少将', '海軍中将', '海軍大将'] },
+    { name: '海の住人', titles: ['賞金稼ぎ', '情報屋', '灯台守', '冒険家', '革命家', '謎の旅人', '酒場の主人', '造船技師', '密航者', '人魚の友'] },
+  ];
+
+  /** 元帥・大元帥：noteの加藤貞顕さん（@sadaaki）と深津貴之さん（@fladdict）だけが名乗れる（v0.6.0）。
+   *  判定は noteの自分のID（urlname）で行う。作者本人（海賊王）も名乗れない。 */
+  const ADMIRALS = ['sadaaki', 'fladdict'];
+  const ADMIRAL_TITLES = ['大元帥', '元帥'];
+
+  /** 特別な称号（解放条件つき）。need(u) が true なら使える */
+  const SPECIALS = [
+    { id: 'follow',   title: 'ジァン=サマー海賊団 船員',   how: '@jeanjeanjean をフォロー',            need: (u) => u.following,                     prog: (u) => [u.following ? 1 : 0, 1] },
+    { id: 'like1',    title: '宝の目利き',                 how: '彼の記事にスキ（1記事）',             need: (u) => u.liked >= 1,                    prog: (u) => [u.liked, 1] },
+    { id: 'like5',    title: 'ジァン=サマー海賊団 甲板長', how: '彼の記事にスキ（5記事）',             need: (u) => u.liked >= 5,                    prog: (u) => [u.liked, 5] },
+    { id: 'likeAll',  title: '全航路の踏破者',             how: '彼の全記事にスキ（5記事以上あるとき）', need: (u) => u.total >= 5 && u.liked >= u.total, prog: (u) => [u.liked, Math.max(u.total, 5)] },
+    { id: 'comment1', title: '酒場の語り部',               how: '彼の記事にコメント（1記事）',         need: (u) => u.commented >= 1,                prog: (u) => [u.commented, 1] },
+    { id: 'comment3', title: 'ジァン=サマー海賊団 伝令係', how: '彼の記事にコメント（3記事）',         need: (u) => u.commented >= 3,                prog: (u) => [u.commented, 3] },
+    { id: 'quote1',   title: '海図の写し手',               how: '自分の記事で彼の記事を引用（1記事）', need: (u) => u.quoted >= 1,                   prog: (u) => [u.quoted, 1] },
+    { id: 'quote3',   title: 'ジァン=サマー海賊団 副船長', how: '自分の記事で彼の記事を引用（3記事）', need: (u) => u.quoted >= 3,                   prog: (u) => [u.quoted, 3] },
+    { id: 'trinity',  title: 'ジァン=サマー海賊団 右腕',   how: 'スキ・コメント・引用をそれぞれ1記事以上', need: (u) => u.liked >= 1 && u.commented >= 1 && u.quoted >= 1, prog: (u) => [(u.liked > 0) + (u.commented > 0) + (u.quoted > 0), 3] },
+    { id: 'captain',  title: '海賊王',                     how: 'ジァン=サマー（@jeanjeanjean）本人だけ', need: (u) => u.captain,                    prog: (u) => [u.captain ? 1 : 0, 1], secret: true },
+  ];
+
+  /* ---------- 着せ替え ---------- */
+  const THEMES = [
+    { id: 'standard', name: '標準',         logo: '🧭', svg: true, desc: 'いつものPen',                         need: () => true,                   how: '',
+      sw: { head: '#fcfcfb', bg: '#f6f6f4', card: '#fcfcfb', accent: '#2a78d6', ink: '#0b0b0b' } },
+    { id: 'pirate',   name: '海賊船',       logo: '🏴‍☠️', desc: '羊皮紙と木の甲板。暗い画面では船長室に', need: (u) => u.following,           how: 'フォローで解放',
+      sw: { head: '#4a2f17', bg: '#efe2c4', card: '#f8efd9', accent: '#8e2a1c', ink: '#2b1d0e' } },
+    { id: 'navy',     name: '海軍本部',     logo: '⚓', desc: '白い制服と紺の旗。規律正しく',         need: (u) => u.following,           how: 'フォローで解放',
+      sw: { head: '#13294b', bg: '#eef2f7', card: '#ffffff', accent: '#1b3a6b', ink: '#0d1b2e' } },
+    { id: 'treasure', name: '黄金の宝島',   logo: '🗺️', desc: '宝の地図と金貨の輝き',                 need: (u) => SPECIALS.find((x) => x.id === 'trinity').need(u),   how: 'スキ・コメント・引用をそれぞれ1記事以上で解放',
+      sw: { head: '#8a6206', bg: '#fbf6e6', card: '#fffdf5', accent: '#a67c00', ink: '#2a2208' } },
+    { id: 'king',     name: '海賊王の旗艦', logo: '👑', desc: '漆黒と真紅と黄金',                     need: (u) => u.captain,             how: '@jeanjeanjean 本人だけ',
+      sw: { head: '#0d0b0a', bg: '#1a1512', card: '#241d18', accent: '#c9a227', ink: '#f3e7c9' } },
+  ];
+
+  /* ---------- 状態 ---------- */
+  const BETA_TITLE = (typeof PenBeta !== 'undefined' && PenBeta.TITLE) || '初航海の乗組員';
+  /** β版からの特典の基準日（beta.js の BASE_DATE。1か所で管理）を「2026年9月30日」の形に */
+  const betaBaseText = () => { const d = (typeof PenBeta !== 'undefined' && PenBeta.calc.BASE_DATE) || '2026-09-30'; const [y, mo, da] = d.split('-').map(Number); return `${y}年${mo}月${da}日`; };
+  const BETA_MARK = (typeof PenBeta !== 'undefined' && PenBeta.MARK) || '🧭';
+  const P = { beta: null, perk: null, profile: { theme: 'standard', title: '', custom: '', epithet: '' }, quotedKeysFromBodies: [], u: null, loaded: false };
+
+  function unlocks(me) {
+    const captain = !!(me && me.urlname === CAPTAIN);
+    const admiral = !!(me && ADMIRALS.includes(String(me.urlname || '').toLowerCase()));
+    const perk = P.perk && me && P.perk.urlname === me.urlname ? P.perk : null;
+    const quoted = new Set([...(perk ? perk.quotedKeys || [] : []), ...P.quotedKeysFromBodies || []]).size;
+    const u = {
+      captain, admiral,
+      following: captain || !!(perk && perk.following),
+      total: perk ? perk.total || 0 : 0,
+      liked: perk ? (perk.likedKeys || []).length : 0,
+      commented: perk ? (perk.commentedKeys || []).length : 0,
+      quoted,
+      checkedAt: perk ? perk.checkedAt : 0,
+      beta: !!(P.beta && P.beta.granted), // v0.6.1 β版からの特典（フォローしていなくても使える）
+    };
+    if (captain) Object.assign(u, { liked: 99, commented: 99, quoted: 99, total: 99 });
+    return u;
+  }
+
+  /** 自由入力の称号：「海賊王」と作者の名前は名乗れない（本人を除く） */
+  const BANNED = ['海賊王', '海賊の王', 'パイレーツキング', 'pirateking', 'kingofpirates', 'ジァン=サマー', 'ジャン=サマー', 'ジァンサマー', 'ジャンサマー', 'jeanjeanjean'];
+  function normalize(s) { return String(s || '').normalize('NFKC').replace(/[\s・･.\-_ー〜~]/g, '').toLowerCase(); }
+  /** 名乗れない言葉（称号の自由入力と二つ名で共通） */
+  function reservedProblem(t, u) {
+    if (!(u && u.captain) && BANNED.some((b) => normalize(t).includes(normalize(b)))) return '「海賊王」と作者の名前は、ジァン=サマー本人だけが名乗れます。';
+    if (!(u && u.admiral) && normalize(t).includes(normalize('元帥'))) return '「元帥」「大元帥」は、noteの加藤貞顕さんと深津貴之さんだけが名乗れます。';
+    return '';
+  }
+  function customProblem(text, u) {
+    const t = String(text || '').trim();
+    if (!t) return '';
+    if ([...t].length > MAX_TITLE) return `${MAX_TITLE}文字までにしてください。`;
+    return reservedProblem(t, u);
+  }
+
+  /** 二つ名：12文字まで・改行なし。「海賊王」と作者の名前は名乗れない（本人を除く） */
+  function epithetProblem(text, u) {
+    const t = String(text || '').trim();
+    if (!t) return '';
+    if ([...t].length > MAX_EPITHET) return `${MAX_EPITHET}文字までにしてください（今は${[...t].length}文字）。`;
+    if (/[\r\n\t]/.test(t)) return '改行は使えません。';
+    return reservedProblem(t, u);
+  }
+  /** いま表示する二つ名（問題があれば出さない） */
+  function currentEpithet(u) { const t = String(P.profile.epithet || '').trim(); return t && !epithetProblem(t, u) ? t : ''; }
+
+  function availableTitles(u) {
+    const admiral = [...(u.admiral ? ADMIRAL_TITLES : []), ...(u.beta ? [BETA_TITLE] : [])];
+    if (!u.following) return [...admiral];
+    return [...admiral, ...GROUPS.flatMap((g) => g.titles), ...SPECIALS.filter((s) => s.need(u)).map((s) => s.title)];
+  }
+
+  /** いま表示する称号（使えなくなっていたら出さない） */
+  function currentTitle(u) {
+    if (!u.following && !u.admiral && !u.beta) return '';
+    const pr = P.profile;
+    if (!u.following && pr.title === '__custom') return '';
+    if (pr.title === '__custom') return customProblem(pr.custom, u) ? '' : String(pr.custom || '').trim();
+    return availableTitles(u).includes(pr.title) ? pr.title : '';
+  }
+  function currentTheme(u) {
+    const t = THEMES.find((x) => x.id === P.profile.theme);
+    return t && t.need(u) ? t : THEMES[0];
+  }
+
+  function applyTheme(t) {
+    const html = document.documentElement;
+    if (t.id === 'standard') delete html.dataset.theme; else html.dataset.theme = t.id;
+    const logo = document.querySelector('.top .logo');
+    if (logo) { if (t.svg) { if (!logo.querySelector('svg')) logo.innerHTML = LOGO_SVG; } else logo.textContent = t.logo; }
+    try { localStorage.setItem('pen.theme', t.id); } catch (_) { /* 次回のちらつき防止用。なくても動く */ }
+  }
+
+  async function load() {
+    const [perk, profile, bodies, beta] = await Promise.all([NDB.kvGet('perk', null), NDB.kvGet('profile', null), NDB.getAll('bodies'), NDB.kvGet('betaPerk', null)]);
+    P.perk = perk;
+    P.beta = beta;
+    P.profile = { theme: 'standard', title: '', custom: '', epithet: '', ...(profile || {}) };
+    P.quotedKeysFromBodies = bodies.filter((b) => b && b.html && QUOTE_RE.test(b.html)).map((b) => b.noteKey);
+    P.loaded = true;
+  }
+  const saveProfile = () => NDB.kvSet('profile', P.profile);
+
+  /* ---------- 画面 ---------- */
+  function me() { return (typeof S !== 'undefined' && S.me) || null; }
+
+  function renderHeader(u) {
+    const who = $('#whoami');
+    if (!who) return;
+    who.querySelectorAll('.title-chip, .epithet, .beta-mark').forEach((x) => x.remove());
+    const ep = currentEpithet(u);
+    if (ep && me()) {
+      const e = document.createElement('span');
+      e.className = 'epithet';
+      e.textContent = ep;
+      who.prepend(e);
+    }
+    const t = currentTitle(u);
+    if (t === BETA_TITLE && u.beta && me()) {
+      const mk = document.createElement('span');
+      mk.className = 'beta-mark';
+      mk.textContent = BETA_MARK;
+      mk.title = `${BETA_TITLE}（β版からの特典）`;
+      mk.setAttribute('aria-label', mk.title);
+      who.append(mk);
+    }
+    if (t && me()) {
+      const chip = document.createElement('span');
+      chip.className = 'title-chip';
+      chip.textContent = t;
+      who.prepend(chip);
+    }
+  }
+
+  function bountyOf() {
+    const snaps = (typeof S !== 'undefined' && S.snapshots) || [];
+    const s = snaps[snaps.length - 1];
+    if (!s) return 0;
+    const sum = (k) => s.items.reduce((a, i) => a + (i[k] || 0), 0);
+    return Math.round((sum('pv') * 10 + sum('like') * 1000 + sum('comment') * 3000) / 1000) * 1000;
+  }
+
+  function renderStatus(u) {
+    const el = $('#perkStatus');
+    const when = u.checkedAt ? `最終確認：${new Date(u.checkedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'まだ確認していません';
+    const checkBtn = isWeb()
+      ? `<a class="btn" href="https://note.com/" target="_blank" rel="noopener">noteで「Penで記録」をタップして確認</a>`
+      : `<button class="btn" data-action="perk-check">フォローとスキ・コメントを確認する</button>`;
+    if (u.captain) {
+      el.innerHTML = `<h2>👑 海賊王 ${CAPTAIN_NAME} 様</h2><p>すべての称号と着せ替えが使えます。</p>`;
+    } else if (u.following) {
+      el.innerHTML = `<h2>🏴‍☠️ ジァン=サマー海賊団へようこそ</h2>
+        <p>フォローありがとうございます。称号と着せ替えが使えます。彼の記事にスキ・コメント・引用をすると、特別な称号が増えます。</p>
+        <p class="btn-row">${checkBtn} <span class="meta" id="perkRun">${esc(when)}</span></p>
+        <p class="hint">フォロー・スキ・コメントは週に1回、引用は記録のたびに少しずつ、自動で確認します（noteへのアクセスは1秒以上の間隔）。</p>`;
+    } else {
+      el.innerHTML = `<h2>🔒 称号と着せ替えは、フォローで解放</h2>
+        <p>作者 <b>${CAPTAIN_NAME}</b>（<a href="https://note.com/${CAPTAIN}" target="_blank" rel="noopener">@${CAPTAIN}</a>）のnoteをフォローすると、海賊や海軍の称号を名乗れたり、画面を海賊船風に着せ替えたりできます。</p>
+        <p class="btn-row"><a class="btn primary" href="https://note.com/${CAPTAIN}" target="_blank" rel="noopener">noteでフォローする</a> ${checkBtn} <span class="meta" id="perkRun">${esc(when)}</span></p>
+        <p class="hint">フォローしたあと、右のボタンで確認すると解放されます。ほかの機能はフォローしなくても、これまでどおりすべて使えます。</p>`;
+    }
+  }
+
+  function renderTitle(u) {
+    const sel = $('#titleSel'), custom = $('#titleCustom'), msg = $('#titleMsg');
+    const locked = !u.following && !u.admiral && !u.beta;
+    const specials = SPECIALS.filter((s) => s.need(u));
+    const admiral = u.admiral ? `<optgroup label="noteの元帥">${ADMIRAL_TITLES.map((t) => `<option>${esc(t)}</option>`).join('')}</optgroup>` : '';
+    const beta = u.beta ? `<optgroup label="β版からの特典"><option>${esc(BETA_TITLE)}</option></optgroup>` : '';
+    sel.innerHTML = '<option value="">（称号なし）</option>' + beta + admiral
+      + (!u.following ? '' : (specials.length ? `<optgroup label="特別な称号">${specials.map((s) => `<option>${esc(s.title)}</option>`).join('')}</optgroup>` : '')
+      + GROUPS.map((g) => `<optgroup label="${esc(g.name)}">${g.titles.map((t) => `<option>${esc(t)}</option>`).join('')}</optgroup>`).join('')
+      + '<option value="__custom">自由に名乗る…</option>');
+    const pr = P.profile;
+    sel.value = pr.title === '__custom' || availableTitles(u).includes(pr.title) ? pr.title : '';
+    sel.disabled = locked;
+    custom.hidden = sel.value !== '__custom';
+    custom.value = pr.custom || '';
+    custom.disabled = locked || !u.following;
+    const problem = sel.value === '__custom' ? customProblem(custom.value, u) : '';
+    msg.textContent = locked ? '🔒 フォローすると選べます。' : !u.following ? 'ほかの称号は、@jeanjeanjean をフォローすると選べます。' : problem;
+    msg.classList.toggle('bad', !!problem);
+  }
+
+  function renderEpithet(u) {
+    const inp = $('#epithetInput');
+    if (!inp) return;
+    if (document.activeElement !== inp) inp.value = P.profile.epithet || '';
+    $('#epithetIdeas').innerHTML = `<span class="meta">候補：</span>${EPITHET_IDEAS.map((w) => `<button type="button" class="btn small" data-epi="${esc(w)}">${esc(w)}</button>`).join('')}<button type="button" class="btn small" data-epi="">なし</button>`;
+    const problem = epithetProblem(inp.value, u);
+    const msg = $('#epithetMsg');
+    msg.textContent = problem || (inp.value.trim() ? `表示：${inp.value.trim()} ${me() ? me().nickname : ''}` : '');
+    msg.classList.toggle('bad', !!problem);
+  }
+
+  function renderWanted(u) {
+    const m = me();
+    const t = currentTitle(u);
+    const b = bountyOf();
+    $('#wanted').innerHTML = `
+      <div class="w-head">WANTED</div>
+      <div class="w-photo" aria-hidden="true">${currentTheme(u).svg ? LOGO_SVG.replace(/pen-g\b/g, 'pen-gw') : esc(currentTheme(u).logo)}</div>
+      <div class="w-title">${esc(t || '称号なし')}</div>
+      <div class="w-epithet">${esc(currentEpithet(u))}</div>
+      <div class="w-name">${esc(m ? m.nickname : '名無しの船乗り')}</div>
+      <div class="w-bounty"><span>懸賞金</span> ${b.toLocaleString('ja-JP')}</div>
+      <div class="w-foot">Pirates' Editor for note</div>`;
+  }
+
+  function renderThemes(u) {
+    const cur = currentTheme(u).id;
+    $('#themeList').innerHTML = THEMES.filter((t) => t.id !== 'king' || u.captain).map((t) => {
+      const ok = t.need(u);
+      const s = t.sw;
+      return `<button class="theme-opt" data-theme-pick="${t.id}" aria-pressed="${t.id === cur}" ${ok ? '' : 'disabled'}>
+        <span class="tp" style="background:${s.bg}">
+          <span class="tp-head" style="background:${s.head}"></span>
+          <span class="tp-card" style="background:${s.card};border-color:${s.accent}"><i style="background:${s.accent}"></i><i style="background:${s.ink};opacity:.35"></i></span>
+        </span>
+        <span class="tp-name">${esc(t.logo)} ${esc(t.name)}${ok ? '' : ' 🔒'}</span>
+        <span class="tp-desc">${esc(ok ? t.desc : t.how)}</span>
+      </button>`;
+    }).join('');
+  }
+
+  function renderUnlocks(u) {
+    $('#unlockList').innerHTML = SPECIALS.filter((s) => !s.secret || u.captain).map((s) => {
+      const ok = s.need(u);
+      const [a, b] = s.prog(u);
+      const pct = Math.max(0, Math.min(100, Math.round((Math.min(a, b) / b) * 100)));
+      return `<li class="${ok ? 'ok' : ''}">
+        <span class="u-mark">${ok ? '🏅' : '🔒'}</span>
+        <span class="u-body"><b>${esc(s.title)}</b><span class="meta">${esc(s.how)}</span></span>
+        <span class="u-prog">${u.captain ? '' : `${Math.min(a, b)} / ${b}`}<span class="u-bar"><span style="width:${pct}%"></span></span></span>
+      </li>`;
+    }).join('') + `<li class="${u.beta ? 'ok' : 'king'}"><span class="u-mark">${u.beta ? '🏅' : BETA_MARK}</span><span class="u-body"><b>${esc(BETA_TITLE)}</b><span class="meta">${u.beta ? 'β版からの特典です（条件：' + betaBaseText() + 'までに記録を始めていた人）。上の「称号」から選ぶと、名前の横に印（' + BETA_MARK + '）も付きます。フォローしていなくても使えます。' : '条件：' + betaBaseText() + 'までに記録を始めていた人（記録を始めた日で自動で判定します。β版で作った引っ越し用ファイルや、Penのバックアップを復元すると引き継げます）'}</span></span><span class="u-prog"></span></li>` + `<li class="king"><span class="u-mark">⚓</span><span class="u-body"><b>元帥・大元帥</b><span class="meta">${u.admiral ? '名乗れます。上の「称号」から選んでください。' : 'この称号を名乗れるのは、noteの加藤貞顕さん（@sadaaki）と深津貴之さん（@fladdict）だけ。'}</span></span><span class="u-prog"></span></li>` + (u.captain ? '' : `<li class="king"><span class="u-mark">👑</span><span class="u-body"><b>海賊王</b><span class="meta">この称号を名乗れるのは、ジァン=サマー（@jeanjeanjean）ただ一人。</span></span><span class="u-prog"></span></li>`);
+  }
+
+  /** opts.headerOnly：名前の前の称号と着せ替えだけ（v0.6.2 B：称号・着せ替えのタブは開いたときに描く） */
+  function render(opts = {}) {
+    if (!P.loaded) return;
+    const u = unlocks(me());
+    P.u = u;
+    applyTheme(currentTheme(u));
+    renderHeader(u);
+    if (!$('#tab-crew') || opts.headerOnly) return;
+    renderStatus(u);
+    renderTitle(u);
+    renderEpithet(u);
+    renderWanted(u);
+    renderThemes(u);
+    renderUnlocks(u);
+  }
+
+  function bind() {
+    const tab = $('#tab-crew');
+    if (!tab) return;
+    $('#titleSel').addEventListener('change', async (e) => {
+      P.profile.title = e.target.value;
+      if (e.target.value === '__custom') setTimeout(() => $('#titleCustom').focus(), 0);
+      await saveProfile(); render();
+    });
+    let t;
+    $('#titleCustom').addEventListener('input', (e) => {
+      P.profile.custom = e.target.value;
+      clearTimeout(t);
+      t = setTimeout(async () => {
+        await saveProfile();
+        const u = P.u;
+        const problem = customProblem(P.profile.custom, u);
+        $('#titleMsg').textContent = problem; $('#titleMsg').classList.toggle('bad', !!problem);
+        renderHeader(u); renderWanted(u);
+      }, 250);
+    });
+    let te;
+    $('#epithetInput').addEventListener('input', (e) => {
+      P.profile.epithet = e.target.value;
+      clearTimeout(te);
+      te = setTimeout(async () => { await saveProfile(); const u = P.u; renderEpithet(u); renderHeader(u); renderWanted(u); }, 250);
+    });
+    tab.addEventListener('click', async (e) => {
+      const ep = e.target.closest('[data-epi]');
+      if (ep) { P.profile.epithet = ep.dataset.epi; $('#epithetInput').value = ep.dataset.epi; await saveProfile(); render(); return; }
+      const b = e.target.closest('[data-theme-pick]');
+      if (b && !b.disabled) { P.profile.theme = b.dataset.themePick; await saveProfile(); render(); return; }
+      const c = e.target.closest('[data-action="perk-check"]');
+      if (c) {
+        c.disabled = true;
+        const out = $('#perkRun');
+        if (out) out.textContent = 'noteで確認しています…（数秒〜1分）';
+        const r = await chrome.runtime.sendMessage({ type: 'RUN_PERK' });
+        if (!(r && r.ok)) { if (out) out.textContent = `確認できませんでした：${(r && r.error) || '不明なエラー'}`; c.disabled = false; return; }
+        // 結果を待って読み直す
+        const started = Date.now();
+        const before = P.perk && P.perk.checkedAt;
+        const poll = setInterval(async () => {
+          const p = await NDB.kvGet('perk', null);
+          if ((p && p.checkedAt !== before) || Date.now() - started > 90e3) {
+            clearInterval(poll);
+            await load(); render();
+            const out2 = $('#perkRun');
+            if (out2 && Date.now() - started > 90e3 && !(p && p.checkedAt !== before)) out2.textContent = '時間がかかっています。しばらくしてからこの画面を開き直してください。';
+          }
+        }, 3000);
+      }
+    });
+  }
+
+  const crewHidden = () => { const t = $('#tab-crew'); return !t || t.hidden; };
+  async function init() { await load(); bind(); render({ headerOnly: crewHidden() }); }
+
+  window.PenPerks = { render, reload: async () => { await load(); render({ headerOnly: crewHidden() }); }, _test: { unlocks, customProblem, epithetProblem, normalize, SPECIALS, THEMES, EPITHET_IDEAS } };
+  init();
+})();
