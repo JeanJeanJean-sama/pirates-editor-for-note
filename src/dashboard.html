@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pirates' Editor for note</title>
+<link rel="stylesheet" href="dashboard.css">
+<script src="theme-boot.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Pen"><defs><linearGradient id="pen-g" gradientUnits="userSpaceOnUse" x1="14" y1="86" x2="86" y2="14"><stop offset="0" stop-color="#14c3ea"/><stop offset="0.5" stop-color="#3a7df6"/><stop offset="1" stop-color="#7b57f2"/></linearGradient></defs><path fill="url(#pen-g)" d="M46.07,10.09L44.36,10.30L42.90,10.53L41.45,10.82L39.78,11.22L38.36,11.63L36.72,12.16L35.34,12.68L33.75,13.34L32.19,14.07L30.88,14.75L29.38,15.61L28.13,16.39L26.71,17.36L25.52,18.24L24.18,19.32L22.98,20.37L26.71,23.21L27.82,22.28L28.85,21.49L29.92,20.73L31.19,19.89L32.50,19.11L33.65,18.49L34.82,17.91L36.01,17.37L37.43,16.80L38.66,16.36L39.90,15.97L41.16,15.62L42.43,15.32L43.93,15.02L45.22,14.82L46.67,14.66L47.48,9.98ZM55.25,33.50L50.00,3.00L44.75,33.50ZM28.01,30.87L27.13,31.93L26.59,32.64L25.96,33.51L25.47,34.25L24.91,35.17L24.46,35.94L23.96,36.89L23.57,37.70L23.21,38.52L22.80,39.51L22.49,40.35L22.21,41.20L21.91,42.23L21.68,43.09L21.48,43.96L21.28,45.00L24.14,44.45L24.34,43.57L24.60,42.63L24.88,41.70L25.21,40.78L25.56,39.88L25.95,38.99L26.37,38.11L26.83,37.25L27.31,36.40L27.83,35.58L28.37,34.77L28.95,33.98L29.55,33.22L30.19,32.48L30.84,31.76L31.53,31.07L32.24,30.40L32.97,29.76L33.73,29.15L34.51,28.56L35.31,28.01L36.12,27.48L36.96,26.99L37.82,26.52L38.69,26.09L39.58,25.69L40.48,25.32L41.40,24.99L42.32,24.69L43.26,24.42L44.20,24.19L45.06,24.01L45.55,21.19L44.66,21.34L43.61,21.56L42.57,21.81L41.54,22.11L40.69,22.38L39.68,22.74L38.68,23.14L37.70,23.57L36.89,23.96L35.94,24.46L35.01,25.00L34.10,25.57L33.22,26.17L32.49,26.69L31.65,27.35L30.87,28.01L18.89,18.89ZM19.32,24.18L18.39,25.33L17.36,26.71L16.52,27.93L15.73,29.17L14.87,30.66L14.18,31.97L13.44,33.53L12.86,34.88L12.33,36.26L11.77,37.89L11.29,39.54L10.93,40.97L10.58,42.66L10.33,44.12L10.14,45.58L10.00,47.15L14.70,46.25L14.88,44.79L15.10,43.50L15.36,42.22L15.67,40.95L16.03,39.69L16.50,38.25L16.96,37.02L17.46,35.81L18.10,34.43L18.69,33.27L19.33,32.12L20.01,31.01L20.73,29.92L21.49,28.85L22.28,27.82L23.21,26.71L20.37,22.98ZM37.95,50.47L38.38,50.37L38.79,50.23L39.18,50.08L39.43,49.96L39.82,49.75L40.33,49.40L40.68,49.12L40.89,48.92L41.18,48.60L41.35,48.38L41.58,48.03L41.79,47.64L41.97,47.23L42.07,46.96L42.19,46.53L42.27,46.09L42.31,45.79L42.33,45.48L42.34,45.01L42.31,44.54L42.28,44.23L42.20,43.79L42.08,43.36L41.94,42.95L41.83,42.69L41.63,42.30L41.47,42.05L41.21,41.68L40.90,41.35L40.57,41.04L40.06,40.67L39.50,40.34L39.00,40.12L38.48,39.95L37.92,39.81L37.47,39.73L37.01,39.68L36.19,39.63L29.23,39.63L29.23,56.84L33.42,56.84L33.42,50.66L36.36,50.66L37.19,50.60ZM37.68,46.54L37.59,46.66L37.39,46.85L37.18,46.99L36.94,47.11L36.68,47.21L36.38,47.27L36.05,47.31L35.70,47.33L33.42,47.33L33.42,43.01L35.70,43.01L36.05,43.03L36.38,43.07L36.68,43.13L36.94,43.23L37.07,43.28L37.39,43.49L37.59,43.68L37.76,43.92L37.90,44.19L38.00,44.48L38.06,44.81L38.07,45.17L38.06,45.53L38.03,45.70L37.95,46.01L37.84,46.29ZM55.95,47.78L55.79,47.22L55.52,46.55L55.32,46.18L55.16,45.91L54.82,45.42L54.63,45.19L54.23,44.76L54.01,44.56L53.54,44.19L53.17,43.95L52.90,43.80L52.38,43.54L51.68,43.29L51.10,43.14L50.34,43.02L49.70,42.97L48.89,42.98L48.12,43.05L47.38,43.20L46.69,43.41L46.15,43.63L45.77,43.82L45.50,43.98L45.00,44.32L44.65,44.61L44.43,44.81L44.02,45.25L43.66,45.74L43.33,46.27L43.03,46.91L42.83,47.44L42.75,47.72L42.65,48.15L42.57,48.59L42.48,49.36L42.46,50.16L42.51,50.96L42.55,51.26L42.65,51.85L42.84,52.56L42.98,52.96L43.28,53.60L43.59,54.13L43.76,54.38L44.04,54.75L44.45,55.19L44.90,55.59L45.40,55.94L45.66,56.10L46.18,56.37L46.57,56.54L47.12,56.73L47.55,56.84L47.98,56.92L48.28,56.97L48.90,57.02L49.21,57.03L49.69,57.03L50.30,56.99L50.89,56.90L51.46,56.76L52.13,56.53L52.67,56.29L53.20,55.99L53.68,55.65L54.13,55.27L54.54,54.84L54.92,54.36L55.09,54.11L55.39,53.58L55.64,53.03L55.74,52.75L55.87,52.30L51.41,52.30L51.26,52.58L51.00,52.94L50.89,53.04L50.68,53.22L50.43,53.37L50.03,53.53L49.72,53.59L49.23,53.63L48.76,53.59L48.33,53.48L47.93,53.30L47.56,53.05L47.26,52.75L47.01,52.40L46.83,51.99L46.70,51.52L46.63,51.01L56.12,51.01L56.16,50.53L56.19,49.78L56.17,49.13L56.10,48.51ZM46.87,47.89L47.07,47.48L47.24,47.25L47.55,46.94L47.90,46.69L48.29,46.50L48.71,46.38L49.01,46.34L49.33,46.32L49.82,46.36L50.12,46.42L50.41,46.51L50.68,46.63L50.93,46.78L51.16,46.96L51.37,47.17L51.55,47.39L51.69,47.64L51.74,47.77L51.86,48.20L51.90,48.68L46.65,48.68L46.76,48.18ZM27.98,45.04L2.00,50.00L27.98,54.96ZM10.12,54.18L10.30,55.64L10.58,57.34L10.93,59.03L11.29,60.46L11.70,61.88L12.24,63.51L12.86,65.12L13.44,66.47L14.07,67.81L14.87,69.34L15.73,70.83L16.52,72.07L17.36,73.29L18.39,74.67L19.32,75.82L20.37,77.02L23.21,73.29L22.28,72.18L21.49,71.15L20.73,70.08L20.01,68.99L19.22,67.69L18.59,66.54L18.00,65.37L17.46,64.19L16.96,62.98L16.50,61.75L16.09,60.51L15.67,59.05L15.36,57.78L15.10,56.50L14.88,55.21L14.70,53.75L10.00,52.85ZM21.52,56.21L21.72,57.08L22.00,58.12L22.27,58.97L22.55,59.82L22.87,60.66L23.21,61.48L23.57,62.30L23.96,63.11L24.38,63.90L24.82,64.68L25.28,65.44L25.76,66.19L26.27,66.93L26.80,67.65L27.35,68.35L28.01,69.13L18.89,81.11L30.87,71.99L31.65,72.65L32.49,73.31L33.22,73.83L34.10,74.43L35.01,75.00L35.94,75.54L36.73,75.96L37.70,76.43L38.52,76.79L39.51,77.20L40.52,77.56L41.54,77.89L42.57,78.19L43.61,78.44L44.66,78.66L45.55,78.81L45.06,75.99L44.20,75.81L43.26,75.58L42.32,75.31L41.40,75.01L40.63,74.74L39.73,74.37L38.84,73.98L37.96,73.55L37.25,73.17L36.40,72.69L35.58,72.17L34.77,71.63L34.11,71.15L33.35,70.55L32.60,69.92L31.88,69.27L31.18,68.59L30.51,67.88L29.87,67.15L29.25,66.40L28.66,65.63L28.10,64.83L27.48,63.88L26.99,63.04L26.52,62.18L26.09,61.31L25.69,60.42L25.26,59.37L24.94,58.45L24.64,57.52L24.38,56.58L24.14,55.55L21.28,55.00ZM23.99,80.52L25.14,81.46L26.51,82.50L27.93,83.48L29.17,84.27L30.45,85.01L31.97,85.82L33.53,86.56L34.88,87.14L36.49,87.76L37.89,88.23L39.30,88.65L40.97,89.07L42.66,89.42L44.12,89.67L45.82,89.88L47.48,90.02L46.67,85.34L45.22,85.18L43.93,84.98L42.65,84.73L41.16,84.38L39.69,83.97L38.45,83.57L37.22,83.12L36.01,82.63L34.82,82.09L33.65,81.51L32.31,80.78L31.19,80.11L30.10,79.40L28.85,78.51L27.82,77.72L26.71,76.79L22.98,79.63ZM75.82,19.32L74.48,18.24L73.29,17.36L71.87,16.39L70.62,15.61L69.34,14.87L67.81,14.07L66.25,13.34L64.89,12.77L63.28,12.16L61.88,11.70L60.22,11.22L58.79,10.87L57.34,10.58L55.64,10.30L54.18,10.12L52.52,9.98L53.33,14.66L54.78,14.82L56.07,15.02L57.57,15.32L58.84,15.62L60.10,15.97L61.34,16.36L62.78,16.88L63.99,17.37L65.18,17.91L66.35,18.49L67.69,19.22L68.81,19.89L69.90,20.60L71.15,21.49L72.18,22.28L73.29,23.21L77.02,20.37ZM69.13,28.01L68.35,27.35L67.51,26.69L66.64,26.06L65.75,25.47L64.83,24.91L64.06,24.46L63.11,23.96L62.14,23.50L61.16,23.07L60.16,22.68L59.14,22.32L58.29,22.05L57.26,21.77L56.39,21.56L55.34,21.34L54.45,21.19L54.94,24.01L55.80,24.19L56.74,24.42L57.68,24.69L58.60,24.99L59.52,25.32L60.42,25.69L61.31,26.09L62.18,26.52L63.04,26.99L63.88,27.48L64.69,28.01L65.49,28.56L66.27,29.15L67.03,29.76L67.76,30.40L68.47,31.07L69.16,31.76L69.81,32.48L70.45,33.22L71.05,33.98L71.63,34.77L72.17,35.58L72.69,36.40L73.17,37.25L73.63,38.11L74.05,38.99L74.44,39.88L74.79,40.78L75.12,41.70L75.40,42.63L75.66,43.57L75.86,44.45L78.72,45.00L78.52,43.96L78.32,43.09L78.05,42.05L77.79,41.20L77.51,40.35L77.13,39.34L76.72,38.35L76.35,37.54L75.96,36.73L75.45,35.79L74.91,34.86L74.43,34.10L73.83,33.22L73.31,32.49L72.65,31.65L71.99,30.87L81.11,18.89ZM89.86,45.58L89.67,44.12L89.38,42.42L89.07,40.97L88.65,39.30L88.23,37.89L87.76,36.49L87.14,34.88L86.56,33.53L85.93,32.19L85.13,30.66L84.27,29.17L83.48,27.93L82.64,26.71L81.61,25.33L80.68,24.18L79.63,22.98L76.79,26.71L77.72,27.82L78.51,28.85L79.27,29.92L79.99,31.01L80.78,32.31L81.41,33.46L82.00,34.63L82.54,35.81L83.12,37.22L83.57,38.45L83.97,39.69L84.33,40.95L84.64,42.22L84.90,43.50L85.12,44.79L85.30,46.25L90.00,47.15ZM71.43,45.56L71.59,45.98L71.72,46.40L71.81,46.77L71.92,47.37L71.98,47.92L72.02,48.50L72.02,54.96L98.00,50.00L71.08,44.86L71.23,45.13ZM70.52,46.77L70.39,46.35L70.29,46.08L70.12,45.70L69.91,45.33L69.69,44.99L69.43,44.67L69.14,44.36L68.93,44.17L68.71,43.99L68.36,43.75L67.99,43.55L67.60,43.38L67.19,43.24L66.76,43.13L66.30,43.06L65.83,43.02L65.35,43.02L64.88,43.04L64.44,43.10L64.01,43.20L63.60,43.32L63.21,43.48L62.80,43.69L62.53,43.85L62.17,44.12L61.84,44.41L61.63,44.63L61.36,44.97L61.36,43.16L57.17,43.16L57.17,56.84L61.36,56.84L61.36,49.41L61.39,48.89L61.48,48.41L61.62,47.99L61.82,47.61L62.07,47.28L62.40,46.99L62.77,46.77L63.19,46.62L63.65,46.53L63.98,46.52L64.32,46.53L64.78,46.62L65.20,46.77L65.57,46.99L65.90,47.28L66.15,47.61L66.35,47.99L66.49,48.41L66.58,48.89L66.61,49.41L66.61,56.84L70.77,56.84L70.77,48.50L70.74,48.00L70.68,47.52L70.59,47.06ZM80.68,75.82L81.61,74.67L82.50,73.49L83.48,72.07L84.27,70.83L85.01,69.55L85.82,68.03L86.56,66.47L87.14,65.12L87.76,63.51L88.23,62.11L88.65,60.70L89.07,59.03L89.42,57.34L89.67,55.88L89.86,54.42L90.00,52.85L85.30,53.75L85.12,55.21L84.90,56.50L84.64,57.78L84.33,59.05L83.97,60.31L83.57,61.55L83.12,62.78L82.54,64.19L81.90,65.57L81.31,66.73L80.67,67.88L79.99,68.99L79.27,70.08L78.51,71.15L77.72,72.18L76.79,73.29L79.63,77.02ZM55.51,78.62L56.39,78.44L57.26,78.23L58.12,78.00L59.14,77.68L60.16,77.32L60.99,77.00L61.98,76.58L62.79,76.20L63.58,75.79L64.37,75.36L65.14,74.91L66.05,74.34L66.93,73.73L67.65,73.20L68.35,72.65L69.13,71.99L81.11,81.11L71.99,69.13L72.65,68.35L73.31,67.51L73.83,66.78L74.43,65.90L74.91,65.14L75.45,64.21L75.96,63.27L76.35,62.46L76.72,61.65L77.13,60.66L77.51,59.65L77.79,58.80L78.05,57.95L78.32,56.91L78.52,56.04L78.72,55.00L75.86,55.55L75.66,56.43L75.40,57.37L75.12,58.30L74.79,59.22L74.44,60.12L74.05,61.01L73.70,61.75L73.25,62.61L72.85,63.32L72.35,64.15L71.81,64.96L71.24,65.76L70.65,66.53L70.13,67.15L69.49,67.88L68.82,68.59L68.12,69.27L67.40,69.92L66.65,70.55L65.89,71.15L65.10,71.72L64.29,72.26L63.46,72.77L62.47,73.33L61.60,73.77L60.72,74.18L59.82,74.56L58.76,74.96L57.83,75.26L56.90,75.53L55.95,75.77L54.94,75.99L54.45,78.81ZM50.00,97.00L55.25,66.50L44.75,66.50ZM54.18,89.88L55.88,89.67L57.34,89.42L59.03,89.07L60.46,88.71L61.88,88.30L63.51,87.76L65.12,87.14L66.47,86.56L68.03,85.82L69.34,85.13L70.83,84.27L72.07,83.48L73.29,82.64L74.67,81.61L75.82,80.68L77.02,79.63L73.29,76.79L72.18,77.72L71.15,78.51L70.08,79.27L68.81,80.11L67.69,80.78L66.54,81.41L65.18,82.09L63.99,82.63L62.57,83.20L61.34,83.64L60.10,84.03L58.84,84.38L57.35,84.73L56.07,84.98L54.78,85.18L53.33,85.34L52.52,90.02Z"/></svg></span>
+    <div>
+      <h1>Pirates' Editor for note <span class="meta">Pen</span></h1>
+      <p class="sub" id="whoami">読み込み中…</p>
+    </div>
+  </div>
+  <div class="tabs-wrap" id="tabsWrap">
+  <nav class="tabs" role="tablist" id="tabsNav">
+    <button role="tab" data-tab="overview" aria-selected="true">概要</button>
+    <button role="tab" data-tab="articles">記事</button>
+    <button role="tab" data-tab="comments">コメント <span class="pill" id="unrepliedBadge" hidden></span></button>
+    <button role="tab" data-tab="calendar">予定 <span class="pill" id="deadlineBadge" hidden></span></button>
+    <button role="tab" data-tab="crew">称号・着せ替え</button>
+    <button role="tab" data-tab="data">設定</button>
+  </nav>
+  <button type="button" class="tabs-more left" data-tabs-scroll="-1" aria-label="タブを左へ" hidden>‹</button>
+  <button type="button" class="tabs-more right" data-tabs-scroll="1" aria-label="タブを右へ（続きがあります）" hidden>›</button>
+  </div>
+</header>
+
+<main>
+  <!-- 概要 -->
+  <section id="tab-overview" class="tab">
+    <div id="emptyState" class="card empty" hidden>
+      <h2>まだデータがありません</h2>
+      <p class="ext-only">noteにログインした状態で、note.com のページを開くと自動で記録が始まります（1日1回）。</p>
+      <p class="ext-only"><button class="btn primary" data-action="run-now">今すぐ記録する</button></p>
+      <p class="hint beta-move">β版を使っていた人は、β版（0.6.3）で作った引っ越し用ファイルを「復元」で読み込んでください。記録・設定・称号・β版からの特典を引き継げます。<button type="button" class="linkish" data-action="goto-restore">復元する場所を開く</button></p>
+      <p class="web-only">noteにログインした状態で note.com を開き、ブックマークレット「Penで記録」をタップすると、ここにデータが入ります。</p>
+      <p class="web-only"><a class="btn primary" href="install.html">記録のしかた（ブックマークレットの登録）</a>　<label class="btn">パソコン版Penのバックアップを読み込む<input type="file" accept="application/json" class="importFileAlt" hidden></label></p>
+    </div>
+    <div id="accountBanner" class="card banner account" hidden role="alert"></div>
+    <div id="betaBanner" class="card banner beta" hidden role="status"></div>
+    <div id="fmtBanner" class="card banner" hidden role="status"></div>
+    <div id="backupBanner" class="card banner web-only" hidden></div>
+    <div id="soonBanner" class="card banner soon" hidden></div>
+    <div id="startGuide" class="card banner start-guide" hidden></div>
+    <div class="totals-box" id="totalsBox">
+      <div class="totals-head" id="totalsHead" hidden></div>
+      <div class="kpis" id="kpis"></div>
+      <p class="meta" id="snapMeta"></p>
+    </div>
+
+    <!-- v0.6.2 E：期間の選択（率・期間の動き・伸びた記事・期間ごとの比較が同じ期間を使う）。スクロールしても上に見える -->
+    <div class="period-bar" id="periodBar" hidden>
+      <span class="pb-label">期間</span>
+      <div id="growthPicker"></div>
+      <div class="period-nav" id="periodNav"></div>
+    </div>
+
+    <div class="card" id="ratesCard" hidden>
+      <div class="card-head">
+        <h2>率（開封率・スキ率・コメント率）</h2>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="率の範囲" id="ratesMode">
+            <button type="button" data-rmode="total" aria-pressed="false">累計</button>
+            <button type="button" data-rmode="period" aria-pressed="true">選んだ期間</button>
+          </div>
+          <label class="check"><input type="checkbox" id="ratesShow" checked> 表示する</label>
+          <button type="button" class="linkish meta goto-setting" data-goto-setting="rates">設定で見る</button>
+        </div>
+      </div>
+      <div id="ratesBody"></div>
+    </div>
+
+    <div class="card" id="periodCard" hidden>
+      <div class="card-head">
+        <h2>期間の動き <button type="button" class="btn small" data-action="share-open" title="noteの振り返り記事に使う文字や画像を作ります">共有用に出す</button></h2>
+      </div>
+      <div id="periodBody"></div>
+    </div>
+
+    <div class="card" id="growthCard">
+      <div class="card-head">
+        <h2>伸びた記事</h2>
+        <div class="controls">
+          <label>並べ替え
+            <select id="growthMetric">
+              <option value="pv">PV</option>
+              <option value="like">スキ</option>
+              <option value="comment">コメント</option>
+              <option value="imp">インプレッション</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <p class="meta" id="growthMeta"></p>
+      <ol class="rank" id="growthList"></ol>
+    </div>
+
+    <div class="card" id="compareCard">
+      <div class="card-head"><h2>期間ごとの比較</h2><span class="meta" id="compareMeta"></span></div>
+      <p class="hint">「期間の動き」で選んだ期間と同じ長さで、それより前の期間と並べます。各区切りの伸びは「区切りの最終日までの最後の記録」から「区切りの前日までの最後の記録」を引いた数です。</p>
+      <div id="compareBody"></div>
+    </div>
+  </section>
+
+  <!-- 記事 -->
+  <section id="tab-articles" class="tab" hidden>
+    <div class="seg subtabs" role="group" aria-label="記事の見方">
+      <button type="button" data-asub="articles" aria-pressed="true">一覧</button>
+      <button type="button" data-asub="map" aria-pressed="false">マップ</button>
+    </div>
+    <div class="card" id="searchCard">
+      <div class="card-head"><h2>記事を探す <span class="meta">本文・タイトル・ハッシュタグ・投稿日</span></h2></div>
+      <div id="searchForm"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>どの記事がどう動いている？ <span class="meta" id="articleCount"></span></h2>
+        <div class="seg" role="group" aria-label="表示">
+          <button data-view="cards" aria-pressed="true">カード</button>
+          <button data-view="table" aria-pressed="false">表</button>
+        </div>
+      </div>
+      <div class="controls wrap">
+        <div class="seg" role="group" aria-label="見る段階" id="stageSeg">
+          <button data-stage="entry" aria-pressed="true">入口（インプレッション→PV）</button>
+          <button data-stage="response" aria-pressed="false">反応（PV→スキ）</button>
+        </div>
+        <div class="seg" role="group" aria-label="並べ替え" id="orderSeg">
+          <button data-order="new" aria-pressed="true">公開が新しい順</button>
+          <button data-order="delta" aria-pressed="false">前回からの差が大きい順</button>
+          <button data-order="pv" aria-pressed="false">PVが多い順</button>
+          <button data-order="rate" aria-pressed="false">率が高い順</button>
+        </div>
+        <input type="search" id="articleSearch" placeholder="タイトルで絞り込み">
+      </div>
+      <div class="controls wrap trend-controls" id="trendControls" hidden></div>
+      <p class="hint" id="cardsHint">棒はすべての記事で同じ物差し（対数目盛）です。縦の点線は全記事の中央値です。右端の数字は前回の記録からの増加です。</p>
+      <div id="cardList"></div>
+      <p id="cardMore" hidden><button class="btn" data-action="more-cards">さらに表示</button></p>
+      <div class="table-wrap" id="tableWrap" hidden>
+        <table class="grid" id="articleTable">
+          <thead><tr>
+            <th data-sort="title" class="l">タイトル</th>
+            <th data-sort="publishedAt">公開日</th>
+            <th data-sort="imp">インプレッション</th>
+            <th data-sort="pv">PV</th>
+            <th data-sort="dpv">PV 前回比</th>
+            <th data-sort="like">スキ</th>
+            <th data-sort="dlike">スキ 前回比</th>
+            <th data-sort="comment">コメント</th>
+            <th data-sort="ctr" title="PV ÷ インプレッション">開封率</th>
+            <th data-sort="likeRate" title="スキ ÷ PV">スキ率</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- マップ -->
+  <section id="tab-map" class="tab" hidden>
+    <div class="seg subtabs" role="group" aria-label="記事の見方">
+      <button type="button" data-asub="articles" aria-pressed="false">一覧</button>
+      <button type="button" data-asub="map" aria-pressed="true">マップ</button>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>全体の中でどんな位置？</h2>
+        <div class="seg" role="group" aria-label="組み合わせ" id="mapSeg">
+          <button data-map="a" aria-pressed="true">A: インプレッション → PV</button>
+          <button data-map="b" aria-pressed="false">B: PV → スキ</button>
+        </div>
+      </div>
+      <div class="controls map-controls">
+        <span class="meta">補助線</span>
+        <div class="seg" role="group" aria-label="補助線" id="mapGuideSeg">
+          <button type="button" data-mguide="diag" aria-pressed="true">斜めの線（％の目安）</button>
+          <button type="button" data-mguide="quad" aria-pressed="false">4つの区画</button>
+        </div>
+        <button type="button" class="linkish meta goto-setting" data-goto-setting="mapGuide">設定で見る</button>
+        <label id="mapMinWrap" hidden><span id="mapMinLabel">インプレッションが</span> <input type="number" id="mapMin" min="0" step="10" value="100" inputmode="numeric"> 未満の記事は除く</label>
+      </div>
+      <p class="hint" id="mapHint"></p>
+      <div class="legend" id="mapLegend"></div>
+      <div class="legend quad-info" id="mapQuadInfo" hidden></div>
+      <div id="mapChart" class="chart map"></div>
+    </div>
+  </section>
+
+  <!-- コメント -->
+  <section id="tab-comments" class="tab" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>未返信のコメント <span class="meta" id="unrepliedMeta"></span></h2>
+        <div class="controls">
+          <button class="btn small ext-only" data-action="recheck">今すぐ確認し直す</button>
+          <label class="check"><input type="checkbox" id="showDismissed"> 対応済みも表示</label>
+        </div>
+      </div>
+      <p class="hint">自分の記事についたコメントのうち、あなたがまだ返信していないものです（noteの「作者が返信済みか」の情報を使っています）。<span class="ext-only">返信すると、この画面を開いたときや、記事のページで30秒ほど待つと自動で消えます。</span><span class="web-only">返信したあと、noteでもう一度「Penで記録」をタップすると消えます。</span>返信しないと決めたものは「対応済み」にできます。</p>
+      <div id="unrepliedList"></div>
+      <h3 class="subhead">返信への返信（要確認）</h3>
+      <p class="hint">自分の記事のコメントのやり取りで、あなたが返信したあとに相手がまた書き込んだものです。そのやり取りで最後にあなたが返信すると、次に確かめたときに自動で消えます。返信しないと決めたものは「確認済み」にできます（相手がまた書き込むと、もう一度出ます）。</p>
+      <div id="threadList"></div>
+      <p class="hint look-at"><span id="commentLookAt"></span><span class="ext-only">　コメントに気づけるのは note を開いたときです。noteを開いたままにしておくと早く気づけます（通知を<span id="noticeEveryText">5分</span>ごとに確かめます）。</span><span class="web-only">　コメントは、noteで「Penで記録」をタップしたときに確かめます。</span> <button type="button" class="linkish meta goto-setting ext-only" data-goto-setting="noticeEvery">設定で見る</button></p>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>自分のコメントへの返信（未確認） <span class="meta" id="mineRepliesMeta"></span></h2>
+        <button type="button" class="linkish meta goto-setting" data-goto-setting="badgeMineReplies">設定で見る</button></div>
+      <p class="hint">他の人の記事に書いたあなたのコメントに、返信が来たものです。「確認済み」を押すまで残ります。そのやり取りで最後にあなたが返信すると、自動で消えます。noteの通知から拾っているため、通知を切っている人や、通知が流れてしまった返信は出ません。</p>
+      <div id="mineRepliesList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>自分がコメントした記事 <span class="meta" id="myCommentsMeta"></span></h2></div>
+      <p class="hint">他の人の記事を開いたときにコメント欄から見つけたものと、通知（あなたのコメントへの返信・スキ）から見つけたものを記録しています。noteには自分のコメント一覧の機能がないため、拡張機能を入れる前のコメントは、その記事を開き直すか、返信・スキの通知が来たときに追加されます。</p>
+      <div id="myCommentsList"></div>
+    </div>
+  </section>
+
+  <!-- データ・設定 -->
+  <!-- 称号・着せ替え -->
+  <!-- カレンダー（v0.6.0 ⑨） -->
+  <section id="tab-calendar" class="tab" hidden>
+    <div class="card" id="calSoon" hidden></div>
+    <div class="card" id="calCard">
+      <div class="card-head">
+        <h2 id="calTitle">カレンダー</h2>
+        <div class="controls">
+          <button type="button" class="btn small" data-cal="prev" aria-label="前の月">←</button>
+          <button type="button" class="btn small" data-cal="today">今月</button>
+          <button type="button" class="btn small" data-cal="next" aria-label="次の月">→</button>
+          <button type="button" class="btn small primary" data-cal="add">＋ 予定を足す</button>
+        </div>
+      </div>
+      <p class="hint">投稿した日は、Penの記録（記事の公開日）から自動で出ます。「投稿予定」（特定の日か期間）、「コンテスト」（開始日〜終了日）、「その他」の予定は手で入れられます。日付を押すと、その日の予定を足せます。通知は出しません（この画面を開いたときに、近い締切・予定を表示します）。</p>
+      <div class="cal-legend" id="calLegend"><span class="lg"><i class="cal-mk posted">●</i>投稿した記事</span><span class="lg"><i class="cal-mk post">○</i>投稿予定</span><span class="lg"><i class="cal-mk contest">⚑</i>コンテスト</span><span class="lg"><i class="cal-mk other">◆</i>その他</span><span class="lg"><i class="cal-bandmk contest"></i>期間の予定（帯）</span><span class="lg"><i class="cal-bandmk post soft"></i>投稿予定・その他の期間（薄い帯）</span><button type="button" class="linkish meta" data-cal="colors">色を変える</button></div>
+      <div id="calGrid" class="cal-grid" role="grid" aria-labelledby="calTitle"></div>
+      <h3 class="subhead">この月の予定と投稿</h3>
+      <ul id="calList" class="cal-list"></ul>
+    </div>
+    <div class="card" id="missionCard">
+      <div class="card-head"><h2>セルフミッション <span class="meta" id="missionMeta"></span></h2><button type="button" class="btn small primary" data-m="new">＋ ミッションを作る</button></div>
+      <p class="hint">自分で決める目標です。進み具合は、Penの記録から自動で計算します。連続投稿は「お休みの日」を決められます（お休みの日は投稿しなくても途切れません。今日まだ投稿していなくても途切れません）。</p>
+      <ul id="missionList" class="m-list"></ul>
+    </div>
+  </section>
+
+  <section id="tab-crew" class="tab" hidden>
+    <div class="card perk-status" id="perkStatus"></div>
+    <div class="crew-grid">
+      <div class="card">
+        <h2>称号</h2>
+        <p class="hint">画面の上、名前の前に表示されます。海賊・海軍・海の住人の肩書から選ぶか、「自由に名乗る」で好きな肩書を入れてください（16文字まで）。</p>
+        <p><select id="titleSel" aria-label="称号"></select></p>
+        <p><input type="text" id="titleCustom" maxlength="16" placeholder="例：砂漠の航海士" aria-label="自由な称号" hidden></p>
+        <p class="meta" id="titleMsg"></p>
+        <h3 class="subhead">二つ名</h3>
+        <p class="hint">名前の前に付ける言葉です（12文字まで。例：「鉄壁の」）。画面の上の名前と、手配書に表示されます。フォローしなくても使えます。</p>
+        <p><input type="text" id="epithetInput" class="epithet-input" maxlength="24" placeholder="例：鉄壁の" aria-label="二つ名" autocomplete="off"></p>
+        <p class="epithet-ideas" id="epithetIdeas"></p>
+        <p class="meta" id="epithetMsg" role="status"></p>
+      </div>
+      <div class="wanted" id="wanted" aria-label="手配書（称号のプレビュー）"></div>
+    </div>
+    <div class="card">
+      <h2>着せ替え</h2>
+      <div class="themes" id="themeList"></div>
+      <p class="hint">グラフの色（インプレッション＝青、PV＝橙、スキ＝緑）は、どの着せ替えでも同じです。パソコンやスマホの「ダークモード」に合わせて、暗い配色にも切り替わります。</p>
+    </div>
+    <div class="card">
+      <h2>特別な称号</h2>
+      <p class="hint">作者ジァン=サマー（@jeanjeanjean）の記事にスキ・コメント・引用をすると増えます。引用は、Penに記録した自分の記事の本文に、彼の記事のURL（埋め込み）があるかで判定します。</p>
+      <ul class="unlocks" id="unlockList"></ul>
+    </div>
+  </section>
+
+  <section id="tab-data" class="tab" hidden>
+    <div class="card" id="allSettings">
+      <div class="card-head"><h2>設定の一覧</h2></div>
+      <p class="hint">Penの設定はここですべて見られます。その場の切り替え（記事の一覧の上の「見出し画像」など）で変えたものも、ここに出ます。</p>
+      <div id="settingsList" class="settings-list"></div>
+    </div>
+
+    <div class="card explain">
+      <h2>「記録」と「ダウンロード」の違い</h2>
+      <div class="flow">
+        <span class="fstep">note</span><span class="farrow">→</span>
+        <span class="fstep store">Penに<b>記録</b><small>このブラウザの中</small></span><span class="farrow">→</span>
+        <span class="fstep file">⬇ <b>ダウンロード</b><small>パソコンのファイル</small></span>
+      </div>
+      <p class="hint"><b>記録</b>は、Penがグラフや一覧を表示するために、このブラウザの中にデータを貯めておくことです。ファイルとしては見えません。<br>
+      <b>⬇ ダウンロード</b>のボタンを押すと、パソコンの「ダウンロード」フォルダにファイル（CSVなど）が保存され、Excelなどで開けます。</p>
+    </div>
+
+    <div class="card web-only">
+      <h2>記録する</h2>
+      <p>noteにログインした状態で <a href="https://note.com/" target="_blank" rel="noopener">note.com</a> を開き、ブックマークレット「<b>Penで記録</b>」をタップします。記録が終わると自動でこの画面に戻り、データが追加されます。</p>
+      <p><a class="btn primary" href="install.html">ブックマークレットの登録方法</a></p>
+      <p class="hint">スマホでは自動では記録されません。毎日1回タップすると、日ごとの増え方がきれいに記録されます。本文の記録はパソコン版Pen（Chrome拡張機能）でできます。</p>
+    </div>
+
+    <div class="card" id="accountCard">
+      <h2>記録するアカウント</h2>
+      <div id="accountBody"></div>
+    </div>
+
+    <div class="card" id="mixedCard">
+      <h2>別のアカウントの記録の疑い</h2>
+      <div id="mixedBody"></div>
+    </div>
+
+    <div class="card" id="featureCard">
+      <h2>表示する機能</h2>
+      <p class="hint">使わない機能は、ここで表示をOFFにできます（記録したデータは消えません。ONに戻すとまた表示されます）。noteとの通信を止めたいときは、<span class="ext-only">下の「noteから記録する」の設定をOFFにしてください。</span><span class="web-only">Web版は、ブックマークレット「Penで記録」をタップしたときだけnoteと通信します。</span>記録する前のアカウントの確認（上の「記録するアカウント」）は、記録が混ざらないように、いつもONです。</p>
+      <div id="featureList" class="feature-list"></div>
+    </div>
+
+    <div class="card" id="colorCard">
+      <div class="card-head"><h2>グラフとカレンダーの色</h2><button type="button" class="btn small" data-color-reset-all="">すべて元の色に戻す</button></div>
+      <p class="hint">ここで決めた色を、概要のグラフ・記事カードの棒と線・マップの点・共有用の画像・カレンダーのすべてに使います。変えていない色は、着せ替え（明るい画面・暗い画面）ごとの元の色のままです。背景と見分けにくい色を選ぶと ⚠ が出ます。</p>
+      <div id="colorList" class="color-list"></div>
+    </div>
+
+    <div class="card ext-only">
+      <h2>noteから記録する</h2>
+      <p><button class="btn primary" data-action="run-now">今すぐ記録する</button> <span class="meta" id="runStatus"></span></p>
+      <p class="hint">noteのタブが開いていない場合は、noteのトップページを裏で開いて記録し、終わったら自動で閉じます。noteへのアクセスは1秒以上の間隔をあけて行います。</p>
+      <div class="settings">
+        <label class="check"><input type="checkbox" data-setting="autoCollect"> note を開いたときに1日1回、自動で記録する</label>
+        <label class="check"><input type="checkbox" data-setting="finalizePrev"> 前の日の記録を確定する（記録した日の数字を、noteの「その日の終わり」の数字に直します。前の日の統計も読みます）</label>
+        <label class="check"><input type="checkbox" data-setting="checkComments"> 未返信コメントを確認する（6時間ごと）</label>
+        <label class="check"><input type="checkbox" data-setting="recordMyComments"> 自分が書いたコメントを記録する</label>
+        <label class="check"><input type="checkbox" data-setting="perkCheck"> 称号・着せ替えのために、@jeanjeanjean のフォロー・スキ・コメントを確認する（週に1回）</label>
+      </div>
+    </div>
+
+    <div class="card" id="bodyCard">
+      <div class="card-head"><h2>記事の本文をダウンロード</h2></div>
+      <p class="hint ext-only">ボタンを押すと、Penにまだ記録していない記事の本文をnoteから取り込んでから、<b>全記事分のファイルをパソコンにダウンロード</b>します。初回は1記事1秒以上の間隔をあけるため、約200記事で4分ほどかかります（その間はこの画面を開いたままにしてください）。2回目からは、新しい記事の分だけ取り込むのですぐに終わります。</p>
+      <p class="hint web-only">Web版では本文をnoteから取り込めません。パソコン版Pen（Chrome拡張機能）のバックアップを読み込むと、ここからダウンロードできます。</p>
+      <div class="btn-row">
+        <button class="btn primary dl" data-action="bodies-csv">⬇ 全記事の本文をダウンロード（CSV）</button>
+        <button class="btn dl" data-action="bodies-md">⬇ 全記事の本文をダウンロード（Markdown・ZIP）</button>
+      </div>
+      <p class="meta"><span id="bodyProgress"></span> <button class="btn small" id="bodyStop" data-action="bodies-stop" hidden>止める</button></p>
+      <p class="meta">Penに記録済みの本文：<span id="bodyMeta"></span></p>
+      <h3 class="subhead">記事を選んでダウンロード</h3>
+      <p class="hint">Penに本文を記録してある記事から選んで、ダウンロードします（ここではnoteから取り込みません）。</p>
+      <div id="bodyExport"></div>
+      <details class="more">
+        <summary>くわしい設定・説明</summary>
+        <p class="hint">CSVの列は GAS版の「記事一覧」シートと同じ順（A:URL / B:タイトル / C:本文 / D:日付）で、後ろに文字数・ハッシュタグ・有料/無料などが続きます。本文が3万文字を超える記事は「本文(続き2)」以降の列に分けています（Excelの1セルの上限対策）。1記事だけ欲しいときは、「記事」タブの各記事にある「⬇ 本文をダウンロード」を押してください。</p>
+        <p class="ext-only"><button class="btn small" data-action="bodies-all">記事を書き直したときに：全記事の本文を取り込み直してダウンロード</button></p>
+        <label class="check ext-only"><input type="checkbox" data-setting="saveBodies"> 新しく公開した記事の本文を、毎日の記録のときにPenに取り込んでおく</label>
+      </details>
+    </div>
+
+    <div class="card" id="backupCard">
+      <h2>数値のダウンロード・バックアップ</h2>
+      <div class="btn-row">
+        <button class="btn dl" data-action="csv-latest">⬇ 最新の数値をダウンロード（CSV）</button>
+        <button class="btn dl" data-action="csv-all">⬇ これまでの全記録をダウンロード（CSV）</button>
+      </div>
+      <h3 class="subhead">バックアップ</h3>
+      <p class="hint">Penに記録したデータは、このブラウザの中にだけあります。<span class="ext-only">拡張機能を削除すると消えるので、</span><span class="web-only">ブラウザの「Cookieとサイトデータ」を削除すると消え、機種変更でも引き継がれないので、</span>ときどきバックアップファイルをダウンロードしておいてください。パソコン版とWeb版のバックアップは互いに読み込めます。<span id="storageInfo"></span></p>
+      <div class="btn-row">
+        <button class="btn dl" data-action="json-backup">⬇ バックアップをダウンロード（JSON）</button>
+        <button class="btn web-only" data-action="share-backup">⬆ バックアップを共有（ドライブなどに置く）</button>
+        <label class="btn">⬆ バックアップファイルから復元<input type="file" accept="application/json" id="importFile" hidden></label>
+      </div>
+      <p class="hint">β版から移るとき：β版（0.6.3）の設定で作った「正規版への引っ越し用ファイル」を、上の「⬆ バックアップファイルから復元」で読み込んでください。β版の以前のバックアップは、そのままでは読み込めません（β版を 0.6.3 に上げてから、引っ越し用ファイルを作ってください）。</p>
+    </div>
+
+    <div class="card">
+      <h2>動作ログ</h2>
+      <ul class="logs" id="logList"></ul>
+    </div>
+
+    <div class="card danger">
+      <h2>データの削除</h2>
+      <p><button class="btn danger" data-action="wipe">Penに記録したデータをすべて削除</button></p><p class="hint">ダウンロードしたファイル（パソコンの「ダウンロード」フォルダにあるもの）は消えません。</p>
+    </div>
+
+    <div class="card about" id="aboutCard">
+      <h2>このツールについて</h2>
+      <p><b>Pirates' Editor for note</b>（略称 Pen）は、自分のnoteの数値を記録・分析する道具です。note公式のサービスではありません（note株式会社とは関係ありません）。</p>
+      <ul class="about-list">
+        <li>作者：ジァン=サマー（<a href="https://note.com/jeanjeanjean" target="_blank" rel="noopener">note @jeanjeanjean</a>）</li>
+        <li>問い合わせ：<a href="mailto:remmusnaej@gmail.com">remmusnaej@gmail.com</a>（noteのDMでも受け付けます）</li>
+        <li>不具合の報告・ソースコード：<a href="https://github.com/jeanjeanjean-sama/pirates-editor-for-note" target="_blank" rel="noopener">GitHub</a></li>
+        <li>プライバシーポリシー：<a class="ext-only" href="https://github.com/jeanjeanjean-sama/pirates-editor-for-note/blob/main/PRIVACY.md" target="_blank" rel="noopener">PRIVACY.md</a><a class="web-only" href="privacy.html">プライバシー</a>（記録はこのブラウザの中にだけあり、外には送りません）</li>
+        <li>ライセンス：MIT（Copyright (c) 2026 Jean=Summer）</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span class="ver" id="penVersion"></span>note公式のサービスではありません（note株式会社とは関係ありません）。noteの仕様変更で動かなくなることがあります。<span class="web-only">　<a href="privacy.html">プライバシー</a></span>
+</footer>
+
+<div id="tooltip" class="tooltip" role="status" hidden></div>
+<script src="db.js"></script>
+<script src="data.js"></script>
+<script src="store.js"></script>
+<script src="threads.js"></script>
+<script src="backup.js"></script>
+<script src="dashboard.js"></script>
+<script src="periods.js"></script>
+<script src="views.js"></script>
+<script src="cardtrend.js"></script>
+<script src="share.js"></script>
+<script src="search.js"></script>
+<script src="calendar.js"></script>
+<script src="missions.js"></script>
+<script src="features.js"></script>
+<script src="account.js"></script>
+<script src="beta.js"></script>
+<script src="colors.js"></script>
+<script src="settings.js"></script>
+<script src="guide.js"></script>
+<script src="bodies.js"></script>
+<script src="perks.js"></script>
+<script src="backfill.js"></script>
+<script src="backfill-ui.js"></script>
+</body>
+</html>

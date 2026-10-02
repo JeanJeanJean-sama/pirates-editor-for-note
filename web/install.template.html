@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Penで記録 — 登録のしかた</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="app/dashboard.css">
+<style>
+  main { max-width: 760px; }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  .steps > li { counter-increment: s; position: relative; padding: 10px 0 10px 40px; border-top: 1px solid var(--grid); }
+  .steps > li:first-child { border-top: 0; }
+  .steps > li::before { content: counter(s); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .code { width: 100%; height: 88px; font: 11px/1.4 ui-monospace, monospace; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--bg); color: var(--text-2); resize: none; }
+  .drag { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; cursor: grab; }
+  .tabs2 { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs2 button { border: 1px solid var(--line); background: var(--bg); color: var(--text-2); border-radius: 999px; padding: 6px 14px; font: inherit; cursor: pointer; }
+  .tabs2 button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .shot { display: block; max-width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-top: 8px; }
+  kbd { font: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true"><img src="icons/pen-logo.svg" alt=""></span><div><h1>Penで記録 <span class="meta">登録のしかた</span></h1><p class="sub">Web版 Pirates' Editor for note</p></div></div>
+</header>
+<main>
+  <div class="card">
+    <h2>しくみ</h2>
+    <p>スマホのブラウザでは拡張機能が使えないため、<b>ブックマークレット</b>（ブックマークに登録する小さなプログラム）で記録します。</p>
+    <ol>
+      <li>noteにログインした状態で note.com を開く</li>
+      <li>ブックマークの「<b>Penで記録</b>」をタップ（数秒〜数十秒）</li>
+      <li>自動で <a href="./">Web版Pen</a> に切り替わり、データが追加される</li>
+    </ol>
+    <p class="hint">登録するのは短いコードで、実行するたびに、このサイトからPenのプログラム本体を読み込んで動きます。コードには本体の「指紋」が入っていて、登録したときと中身が1文字でも違う本体は、ブラウザが実行しません。そのため、あとからサイトが書き換えられても、あなたのnoteで知らないプログラムが動くことはありません。Penの記録の仕組みが新しくなったときは、Web版Penの画面でお知らせするので、このページからコードを登録し直してください。</p>
+    <p class="hint">取得するのは自分のアカウントのデータだけです。データは<b>あなたのブラウザの中にだけ</b>保存され、外部のサーバーには送りません（受け渡しに使うURLの「#」より後ろは、サーバーに送られない仕組みです）。noteへのアクセスは1秒以上の間隔をあけて行います。</p>
+  </div>
+
+  <div class="card">
+    <h2>① ブックマークレットのコード</h2>
+    <p>下の「コードをコピー」を押してください。次の手順で、ブックマークのURLとして貼り付けます。</p>
+    <textarea class="code" id="code" readonly></textarea>
+    <p class="btn-row"><button class="btn primary" id="copy">コードをコピー</button> <span class="meta" id="copied"></span></p>
+    <details class="more">
+      <summary>外部から読み込まない版（パソコン向け）</summary>
+      <p class="hint">プログラム全体をブックマークに入れる長い版です。このサイトから読み込まずに動きます。記録の仕組みが新しくなったときは、同じように登録し直してください。スマホ（特にAndroid）では長すぎて途中で切れ、動かないことがあります。</p>
+      <textarea class="code" id="codeFull" readonly></textarea>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>② ブックマークに登録</h2>
+    <div class="tabs2" role="group" aria-label="端末">
+      <button data-os="android" aria-pressed="true">Android（Chrome）</button>
+      <button data-os="iphone" aria-pressed="false">iPhone（Safari）</button>
+      <button data-os="pc" aria-pressed="false">パソコン</button>
+    </div>
+
+    <ol class="steps" data-panel="android">
+      <li>このページを開いたまま、Chromeの右上の <kbd>⋮</kbd> → <b>☆</b>（ブックマークに追加）をタップします。</li>
+      <li>画面下に出る「<b>編集</b>」をタップします（見逃したら <kbd>⋮</kbd> → ブックマーク → 追加したブックマークの <kbd>⋮</kbd> → 編集）。</li>
+      <li><b>名前</b>を「<b>Penで記録</b>」に変えます。</li>
+      <li><b>URL</b>の欄を長押しして全部消し、①でコピーしたコードを貼り付けて保存します。</li>
+      <li>使うとき：noteのページで、<b>アドレスバーに「Penで記録」と入力</b>し、候補に出る<b>☆マークの「Penで記録」</b>をタップします。<br><span class="meta">※候補の一番上に出る検索ではなく、☆のついたブックマークを選んでください。</span></li>
+      <!-- 画像を追加する場合： <img class="shot" src="img/android-1.png" alt="…"> -->
+    </ol>
+
+    <ol class="steps" data-panel="iphone" hidden>
+      <li>このページを開いたまま、Safariの下にある <b>共有ボタン</b>（□に↑）をタップし、「<b>ブックマークを追加</b>」を選んで保存します。</li>
+      <li>下の <b>本のアイコン</b>（ブックマーク）をタップし、右下の「<b>編集</b>」を押して、いま追加したブックマークをタップします。</li>
+      <li><b>名前</b>を「<b>Penで記録</b>」に変えます。</li>
+      <li><b>アドレス</b>の欄の <kbd>ⓧ</kbd> を押して消し、①でコピーしたコードを貼り付けて「完了」を押します。</li>
+      <li>使うとき：noteのページで、本のアイコン → 「<b>Penで記録</b>」をタップします。</li>
+      <li><b>このWeb版Penを「ホーム画面に追加」してください</b>（共有ボタン → ホーム画面に追加）。iPhoneのSafariは、7日間開かないサイトのデータを消すことがありますが、ホーム画面に追加すると対象外になります。</li>
+    </ol>
+
+    <ol class="steps" data-panel="pc" hidden>
+      <li>ブックマークバーを表示します（Chromeなら <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>、Macは <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>）。</li>
+      <li>下のボタンを、ブックマークバーにドラッグします。<br><a class="drag" id="drag" href="#">⚓ Penで記録</a></li>
+      <li>使うとき：noteのページで、ブックマークバーの「Penで記録」をクリックします。</li>
+      <li><span class="meta">Chromeをお使いなら、自動で毎日記録できる<a href="https://chromewebstore.google.com/detail/oknmpkaeflacodfgeiigipboaiojpmne">拡張機能版</a>（Chromeウェブストア）がおすすめです。</span></li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>③ 使いかたのコツ</h2>
+    <ul>
+      <li><b>1日1回タップ</b>すると、日ごとの増え方がきれいに記録されます（自動では記録されません）。</li>
+      <li>初回はコメントの確認に数分かかります。急ぐときは「コメント確認を後回し」を押してください。2回目からは数秒〜数十秒です。</li>
+      <li>未返信コメントは、noteで返信したあと、もう一度「Penで記録」をタップすると一覧から消えます。</li>
+      <li>データはこのブラウザの中にだけあります。ときどき「設定」→「バックアップを共有」で、Googleドライブなどに置いてください。機種変更のときは、新しいスマホで「バックアップから復元」します。</li>
+    </ul>
+    <p><a class="btn primary" href="./">Web版Penを開く</a></p>
+  </div>
+</main>
+<footer class="foot">note公式のサービスではありません（note株式会社とは関係ありません）。　<a href="privacy.html">プライバシー</a>　<a href="https://github.com/jeanjeanjean-sama/pirates-editor-for-note">ソースコード</a></footer>
+<script>
+  const CODE = /*__BOOKMARKLET__*/'';
+  document.getElementById('code').value = CODE;
+  document.getElementById('codeFull').value = /*__BOOKMARKLET_FULL__*/'';
+  document.getElementById('drag').href = CODE;
+  document.getElementById('drag').addEventListener('click', (e) => { e.preventDefault(); alert('このボタンはクリックせず、ブックマークバーにドラッグしてください。'); });
+  document.getElementById('copy').addEventListener('click', async () => {
+    const out = document.getElementById('copied');
+    try { await navigator.clipboard.writeText(CODE); out.textContent = 'コピーしました'; }
+    catch (_) { const t = document.getElementById('code'); t.focus(); t.select(); document.execCommand('copy'); out.textContent = 'コピーしました（うまくいかない場合は枠の中を長押しして全選択→コピー）'; }
+  });
+  const osOf = () => /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iphone' : /Android/.test(navigator.userAgent) ? 'android' : 'pc';
+  function show(os) {
+    document.querySelectorAll('[data-os]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.os === os)));
+    document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== os; });
+  }
+  document.querySelectorAll('[data-os]').forEach((b) => b.addEventListener('click', () => show(b.dataset.os)));
+  show(osOf());
+</script>
+</body>
+</html>

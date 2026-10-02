@@ -1,0 +1,395 @@
+{
+ "app": "pirates-editor-for-note",
+ "version": 1,
+ "backupFormat": 2,
+ "appVersion": "0.6.3",
+ "exportedAt": "2026-10-01T05:59:51.958Z",
+ "moveFrom": {
+  "app": "__BETA_APP__",
+  "version": "0.6.3",
+  "exportedAt": "2026-10-01T05:59:51.958Z"
+ },
+ "stores": {
+  "snapshots": [
+   {
+    "date": "2026-09-25",
+    "capturedAt": "2026-09-25T00:30:00.000Z",
+    "statUpdatedAt": "2026-09-25T00:00:00.000Z",
+    "followerCount": 9,
+    "account": "fake",
+    "totals": {
+     "imp": 140,
+     "pv": 14,
+     "like": 2,
+     "comment": 1,
+     "sales": 0,
+     "articles": 2
+    },
+    "fmt": 2,
+    "cols": [
+     "key",
+     "imp",
+     "pv",
+     "like",
+     "comment",
+     "sales"
+    ],
+    "rows": [
+     [
+      "n000000000001",
+      95,
+      9,
+      1,
+      1,
+      0
+     ],
+     [
+      "n000000000002",
+      45,
+      5,
+      1,
+      0,
+      0
+     ]
+    ]
+   },
+   {
+    "date": "2026-09-26",
+    "capturedAt": "2026-09-26T00:30:00.000Z",
+    "statUpdatedAt": "2026-09-26T00:00:00.000Z",
+    "followerCount": 10,
+    "account": "fake",
+    "fmt": 2,
+    "cols": [
+     "key",
+     "imp",
+     "pv",
+     "like",
+     "comment",
+     "sales"
+    ],
+    "rows": [
+     [
+      "n000000000001",
+      100,
+      10,
+      2,
+      1,
+      0
+     ],
+     [
+      "n000000000002",
+      50,
+      5,
+      1,
+      0,
+      0
+     ]
+    ],
+    "totals": {
+     "imp": 150,
+     "pv": 15,
+     "like": 3,
+     "comment": 1,
+     "sales": 0,
+     "articles": 2
+    },
+    "final": true,
+    "finalizedAt": "2026-09-26T20:00:00.000Z",
+    "finalSource": "note-day-end"
+   },
+   {
+    "date": "2026-09-27",
+    "capturedAt": "2026-09-27T00:30:00.000Z",
+    "statUpdatedAt": "2026-09-27T00:00:00.000Z",
+    "followerCount": 11,
+    "account": "fake",
+    "fmt": 2,
+    "cols": [
+     "key",
+     "imp",
+     "pv",
+     "like",
+     "comment",
+     "sales"
+    ],
+    "rows": [
+     [
+      "n000000000001",
+      110,
+      11,
+      3,
+      1,
+      0
+     ],
+     [
+      "n000000000002",
+      55,
+      6,
+      1,
+      0,
+      0
+     ]
+    ],
+    "totals": {
+     "imp": 165,
+     "pv": 17,
+     "like": 4,
+     "comment": 1,
+     "sales": 0,
+     "articles": 2
+    },
+    "final": true,
+    "finalizedAt": "2026-09-27T20:00:00.000Z",
+    "finalSource": "note-day-end"
+   },
+   {
+    "date": "2026-09-28",
+    "capturedAt": "2026-09-28T00:30:00.000Z",
+    "statUpdatedAt": "2026-09-28T00:00:00.000Z",
+    "followerCount": 12,
+    "account": "fake",
+    "fmt": 2,
+    "cols": [
+     "key",
+     "imp",
+     "pv",
+     "like",
+     "comment",
+     "sales"
+    ],
+    "rows": [
+     [
+      "n000000000001",
+      120,
+      12,
+      4,
+      1,
+      0
+     ],
+     [
+      "n000000000002",
+      60,
+      7,
+      1,
+      0,
+      0
+     ]
+    ],
+    "totals": {
+     "imp": 180,
+     "pv": 19,
+     "like": 5,
+     "comment": 1,
+     "sales": 0,
+     "articles": 2
+    },
+    "final": true,
+    "finalizedAt": "2026-09-28T20:00:00.000Z",
+    "finalSource": "note-day-end"
+   },
+   {
+    "date": "2026-09-29",
+    "capturedAt": "2026-09-29T00:30:00.000Z",
+    "statUpdatedAt": "2026-09-29T00:00:00.000Z",
+    "followerCount": 13,
+    "account": "fake",
+    "fmt": 2,
+    "cols": [
+     "key",
+     "imp",
+     "pv",
+     "like",
+     "comment",
+     "sales"
+    ],
+    "rows": [
+     [
+      "n000000000001",
+      130,
+      13,
+      5,
+      1,
+      0
+     ],
+     [
+      "n000000000002",
+      65,
+      8,
+      1,
+      0,
+      0
+     ]
+    ],
+    "totals": {
+     "imp": 195,
+     "pv": 21,
+     "like": 6,
+     "comment": 1,
+     "sales": 0,
+     "articles": 2
+    },
+    "final": true,
+    "finalizedAt": "2026-09-29T20:00:00.000Z",
+    "finalSource": "note-day-end"
+   },
+   {
+    "date": "2026-09-30",
+    "capturedAt": "2026-09-30T00:30:00.000Z",
+    "statUpdatedAt": "2026-09-30T00:00:00.000Z",
+    "followerCount": 14,
+    "account": "fake",
+    "fmt": 2,
+    "cols": [
+     "key",
+     "imp",
+     "pv",
+     "like",
+     "comment",
+     "sales"
+    ],
+    "rows": [
+     [
+      "n000000000001",
+      140,
+      14,
+      6,
+      1,
+      0
+     ],
+     [
+      "n000000000002",
+      70,
+      9,
+      1,
+      0,
+      0
+     ]
+    ],
+    "totals": {
+     "imp": 210,
+     "pv": 23,
+     "like": 7,
+     "comment": 1,
+     "sales": 0,
+     "articles": 2
+    }
+   }
+  ],
+  "articles": [
+   {
+    "key": "n000000000001",
+    "title": "にせの記事 1",
+    "url": "https://note.com/fake/n/n000000000001",
+    "status": "published",
+    "publishedAt": "2026-09-01T01:00:00.000Z",
+    "account": "fake"
+   },
+   {
+    "key": "n000000000002",
+    "title": "にせの記事 2",
+    "url": "https://note.com/fake/n/n000000000002",
+    "status": "published",
+    "publishedAt": "2026-09-20T01:00:00.000Z",
+    "account": "fake"
+   }
+  ],
+  "unreplied": [
+   {
+    "noteKey": "n000000000001",
+    "account": "fake",
+    "comments": [
+     {
+      "key": "c1",
+      "user": "someone",
+      "body": "こんにちは"
+     }
+    ]
+   }
+  ],
+  "myComments": [
+   {
+    "id": "nOTHER00001#c9",
+    "account": "fake",
+    "noteKey": "nOTHER00001",
+    "body": "いい記事です"
+   }
+  ],
+  "bodies": [
+   {
+    "noteKey": "n000000000001",
+    "html": "<p>本文</p>",
+    "account": "fake"
+   }
+  ]
+ },
+ "kv": {
+  "me": {
+   "urlname": "fake",
+   "nickname": "にせのアカウント"
+  },
+  "settings": {
+   "autoCollect": true,
+   "introDone": true,
+   "folded": {
+    "periodCard": true
+   }
+  },
+  "dismissed": {
+   "c1": 1790000000000
+  },
+  "threadReplies": {
+   "t1": {
+    "at": "2026-09-29T00:00:00Z"
+   }
+  },
+  "profile": {
+   "theme": "pirate",
+   "title": "宝の目利き",
+   "custom": "",
+   "epithet": "鉄壁の"
+  },
+  "perk": {
+   "following": true,
+   "liked": 1,
+   "commented": 0,
+   "quoted": 0,
+   "total": 3,
+   "checkedAt": "2026-09-30T00:00:00Z"
+  },
+  "plans": [
+   {
+    "id": "p1",
+    "title": "予定",
+    "date": "2026-10-05"
+   }
+  ],
+  "missions": [
+   {
+    "id": "m1",
+    "kind": "streak",
+    "target": 7,
+    "start": "2026-09-26",
+    "deadline": "",
+    "name": "",
+    "createdAt": 1790000000000
+   }
+  ],
+  "recordAccount": {
+   "urlname": "fake",
+   "nickname": "にせのアカウント",
+   "from": "first"
+  },
+  "betaPerk": {
+   "granted": true,
+   "grantedAt": "2026-09-30T01:00:00.000Z",
+   "reason": "oldest",
+   "oldestDate": "2026-09-25",
+   "urlname": "fake",
+   "noticed": true
+  }
+ },
+ "local": {
+  "pen.theme": "pirate"
+ }
+}
