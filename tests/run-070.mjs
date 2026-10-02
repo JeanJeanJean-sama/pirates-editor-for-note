@@ -64,7 +64,7 @@ async function restoreFile(page, obj, name, pick = '.ask-ov:not(#introPop) .btn.
 function staticTests() {
   console.log('■ 名前・権限');
   const m = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
-  ok(m.version === '0.7.0', '版の番号 0.7.0');
+  ok(m.version === VERSION && /^0\.7\.\d+$/.test(VERSION), `版の番号 ${VERSION}`);
   ok(m.name === "Pirates' Editor for note" && m.short_name === 'Pen', 'manifest の名前（Pirates\' Editor for note・Pen）。「（非公式）」は外した');
   ok(m.description.includes('記録・分析する道具') && m.description.includes('note公式のサービスではありません') && m.description.length <= 132, `説明（${m.description.length}文字・132文字まで）`);
   ok(m.homepage_url === 'https://github.com/jeanjeanjean-sama/pirates-editor-for-note', 'homepage_url に新しいリポジトリ');

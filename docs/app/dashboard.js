@@ -458,9 +458,12 @@ async function importBackup(file) {
   if (typeof PenAccount !== 'undefined' && !(await PenAccount.confirmBackupAccount(dump))) return;
   // v0.6.2 C：復元の前に、今の記録のバックアップを勧める
   const has = PenData.count() > 0;
+  // v0.7.1：過去の記録を埋めたあとに復元すると、埋めた正しい日が、ファイルの中の古い数字で上書きされることがある
+  const filled = has && (await NDB.kvGet('backfillDone', null));
+  const filledNote = filled ? `\n⚠ このブラウザでは「過去の記録を埋める」を済ませています。${PenBackup.isMove(dump) ? '引っ越し用ファイル' : 'バックアップ'}を復元すると、埋めた正しい日が、ファイルの中の${PenBackup.isMove(dump) ? 'β版の' : '古い'}記録で上書きされることがあります。復元したあとで、もう一度「過去の記録を埋める」を押すと直ります（β版から移るときは、復元を先に、埋めるのはあとにするのがおすすめです）。` : '';
   const choice = await penAsk({
     title: PenBackup.isMove(dump) ? 'β版からの引っ越し' : 'バックアップから復元',
-    text: `${PenBackup.isMove(dump) ? 'β版の引っ越し用ファイル' : 'バックアップ'}（${fmtDateTime(dump.exportedAt)} 作成）を読み込みます。同じ日付の記録は上書きされ、それ以外は残ります。${has ? '\n念のため、今の記録を ⬇ バックアップしてから復元しますか？' : ''}`,
+    text: `${PenBackup.isMove(dump) ? 'β版の引っ越し用ファイル' : 'バックアップ'}（${fmtDateTime(dump.exportedAt)} 作成）を読み込みます。同じ日付の記録は上書きされ、それ以外は残ります。${filledNote}${has ? '\n念のため、今の記録を ⬇ バックアップしてから復元しますか？' : ''}`,
     buttons: has
       ? [{ label: '⬇ バックアップして復元', value: 'backup', kind: 'primary' }, { label: 'そのまま復元', value: 'go' }, { label: 'やめる', value: null }]
       : [{ label: '復元する', value: 'go', kind: 'primary' }, { label: 'やめる', value: null }],

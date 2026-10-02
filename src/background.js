@@ -6,7 +6,7 @@
  *  ・未返信コメント数をアイコンのバッジに表示
  * note への通信はすべて content.js（note.com のページ内）で行い、ここでは行わない。
  * ============================================================ */
-importScripts('db.js', 'data.js', 'store.js', 'threads.js'); // 保存処理は store.js（Webアプリ版と共通）
+importScripts('db.js', 'data.js', 'store.js', 'threads.js', 'backfill.js'); // 保存処理は store.js（Webアプリ版と共通）
 
 chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({ url: chrome.runtime.getURL('src/dashboard.html') });
@@ -23,7 +23,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 /** 保存の前の最後の見張り：直近の確認が「記録するアカウント」と違えば保存しない（v0.6.0 ⑫） */
-const GUARDED = new Set(['SAVE_FINAL', 'FINAL_CANDIDATES', 'SAVE_ME', 'SAVE_SNAPSHOT', 'SAVE_UNREPLIED', 'SAVE_MY_COMMENTS', 'SAVE_THREAD_REPLIES', 'SAVE_THREADS', 'SAVE_BODY']);
+const GUARDED = new Set(['SAVE_FINAL', 'FINAL_CANDIDATES', 'CUSTOM_FIX_CANDIDATES', 'SAVE_ME', 'SAVE_SNAPSHOT', 'SAVE_UNREPLIED', 'SAVE_MY_COMMENTS', 'SAVE_THREAD_REPLIES', 'SAVE_THREADS', 'SAVE_BODY', 'BACKFILL_INIT', 'BACKFILL_DAY', 'BACKFILL_CHECKS']);
 const GUARDED_KV = new Set(['perk']);
 let claimChain = Promise.resolve();
 async function accountName() { const a = await NDB.kvGet('recordAccount', null); return a ? a.urlname : ''; }
@@ -72,10 +72,21 @@ async function handle(msg, sender) {
       return { dates: r.dates };
     }
     case 'SAVE_FINAL': {
-      const r = await PenStore.finalizeSnapshot(p.date, p.items, { statUpdatedAt: p.statUpdatedAt });
+      const r = await PenStore.finalizeSnapshot(p.date, p.items, { statUpdatedAt: p.statUpdatedAt, refix: !!p.refix });
       if (r.done && r.missing.length) await PenStore.appendLog('warn', `${p.date} の確定：noteの答えに無い記事が ${r.missing.length}件あったので、Penの数字を残しました（${r.missing.slice(0, 3).join('、')}${r.missing.length > 3 ? ' など' : ''}）`);
       if (r.done && r.smaller.length) await PenStore.appendLog('warn', `${p.date} の確定：noteの数字がPenの記録より小さい記事が ${r.smaller.length}件ありました。noteの数字を使いました（${r.smaller.slice(0, 3).join('、')}${r.smaller.length > 3 ? ' など' : ''}）`);
       return r;
+    }
+    // v0.7.1：10月からの誤った記録の直し
+    case 'CUSTOM_FIX_CANDIDATES': {
+      const r = await PenStore.customFixCandidates(p.today, p.max || 30);
+      for (const x of r.skipped) await PenStore.appendLog('warn', `${x.date} の記録は直しませんでした（${x.reason}）`);
+      return { dates: r.dates };
+    }
+    case 'CUSTOM_FIX_FAIL': {
+      const giveUp = await PenStore.customFixFailed(p.date);
+      if (giveUp) await PenStore.appendLog('warn', `${p.date} の記録は、3回続けて直せなかったので、今の数字のままにしました（${p.reason || ''}）`);
+      return { giveUp };
     }
     case 'FINAL_FAIL': {
       const giveUp = await PenStore.finalFailed(p.date);
@@ -87,6 +98,22 @@ async function handle(msg, sender) {
     case 'CLAIM_QUICK_NOTICE': { const r = claimChain.then(() => PenStore.claimQuickNotice(p.everyMs)); claimChain = r.catch(() => {}); return r; }
 
     case 'RUN_NOW': return runNow(true);
+
+    // v0.7.1 ストア公開記念の特典「過去の記録を埋める」（backfill.js。note への問い合わせは content.js）
+    case 'BACKFILL_STATE': return { state: await PenBackfill.getState() };
+    case 'BACKFILL_START': {
+      const state = await PenBackfill.request();
+      const sent = await tellNoteTabs({ type: 'BACKFILL_RUN' });
+      return { state, needTab: !sent };
+    }
+    case 'BACKFILL_STOP': return { state: await PenBackfill.stop() };
+    case 'BACKFILL_DISCARD': return { state: await PenBackfill.discard() };
+    case 'BACKFILL_INIT': return { state: await PenBackfill.init(p) };
+    case 'BACKFILL_DAY': return { state: await PenBackfill.saveDay(p.date, p.items) };
+    case 'BACKFILL_FAIL': return { state: await PenBackfill.failDay(p.date, p.reason) };
+    case 'BACKFILL_PAUSE': return { state: await PenBackfill.pause(p.reason) };
+    case 'BACKFILL_CHECK_PLAN': return { plan: await PenBackfill.checkPlan() };
+    case 'BACKFILL_CHECKS': { await PenBackfill.finishCheck(p.day || {}, p.all || {}); return { state: await PenBackfill.getState() }; }
 
     case 'SAVE_BODY': await PenStore.saveBody(PenStore.stamp(p.record, await accountName())); return {};
 
@@ -115,6 +142,16 @@ async function handle(msg, sender) {
 
     default: throw new Error(`unknown message: ${msg.type}`);
   }
+}
+
+/** 開いている note のタブに知らせる（1つでも届けば true） */
+async function tellNoteTabs(msg) {
+  const tabs = await chrome.tabs.query({ url: 'https://note.com/*' });
+  let sent = false;
+  for (const t of tabs) {
+    try { await chrome.tabs.sendMessage(t.id, msg); sent = true; break; } catch (_) { /* content script 未注入のタブは飛ばす */ }
+  }
+  return sent;
 }
 
 /** 「今すぐ取得」：開いている note タブで実行。なければ note のダッシュボードを裏で開く */

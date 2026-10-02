@@ -34,6 +34,25 @@
   const GQL_URL = 'https://graphql.note.com/graphql';
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  /* 長く動かすとき（過去の記録を埋める）の待ち方：タブが裏にあると、ページの setTimeout は1分に1回ほどまで遅らされる（Chrome の省電力）。
+   * 小さな作業用の部品（Worker）の中の時計は遅らされないので、そちらで待つ（作れなければ、ふつうの setTimeout）。2026/10/1 に note.com で確かめた */
+  let wtimer = null; // null：まだ試していない、false：使えない、関数：使える
+  function startWorkerTimer() {
+    wtimer = false;
+    try {
+      const w = new Worker(URL.createObjectURL(new Blob(['onmessage=(e)=>setTimeout(()=>postMessage(e.data.id),e.data.ms)'], { type: 'text/javascript' })));
+      const wait = new Map(); let seq = 0;
+      w.onmessage = (e) => { const f = wait.get(e.data); wait.delete(e.data); if (f) f(); };
+      w.onerror = () => { wtimer = false; for (const f of wait.values()) f(); wait.clear(); };
+      const fn = (t) => new Promise((r) => { const id = ++seq; wait.set(id, r); w.postMessage({ id, ms: t }); });
+      // 返事が来ることを確かめてから使う（ページの決まりで Worker が動かないこともある）
+      const id = ++seq; wait.set(id, () => { wtimer = fn; }); w.postMessage({ id, ms: 0 });
+    } catch (_) { wtimer = false; }
+  }
+  function wsleep(ms) {
+    if (wtimer === null) startWorkerTimer();
+    return typeof wtimer === 'function' ? wtimer(ms) : sleep(ms);
+  }
   const send = (type, payload) => chrome.runtime.sendMessage({ type, payload });
   const log = (level, message) => send('LOG', { level, message }).catch(() => {});
   const noteKeyOf = (url) => (String(url).match(/\/n\/(n[0-9a-z]+)/i) || [])[1] || '';
@@ -41,9 +60,9 @@
 
   /* ---------- note への通信（1秒間隔を強制） ---------- */
   let lastRequestAt = 0;
-  async function throttled(fn) {
-    const wait = lastRequestAt + INTERVAL_MS - Date.now();
-    if (wait > 0) await sleep(wait);
+  async function throttled(fn, gap = INTERVAL_MS) {
+    const wait = lastRequestAt + Math.max(INTERVAL_MS, gap) - Date.now();
+    if (wait > 0) await (gap > INTERVAL_MS ? wsleep(wait) : sleep(wait));
     try { return await fn(); } finally { lastRequestAt = Date.now(); }
   }
 
@@ -62,16 +81,16 @@
     return m ? decodeURIComponent(m[1]) : null;
   }
 
-  async function gql(query, variables, tries = 4) {
+  async function gql(query, variables, tries = 4, gap = INTERVAL_MS) {
     const token = gqlToken();
     if (!token) throw new Error('NOT_LOGGED_IN');
     let last = '';
     for (let i = 1; i <= tries; i++) {
       const res = await throttled(() => fetch(GQL_URL, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${token}` },
+        headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${gqlToken() || token}` },
         body: JSON.stringify({ query, variables }),
-      }));
+      }), gap);
       const json = await res.json().catch(() => null);
       if (res.ok && json && json.data) return json.data;
       if (res.status === 401 || res.status === 403) throw new Error('NOT_LOGGED_IN');
@@ -82,8 +101,8 @@
   }
 
   /* ---------- 1. 全期間スナップショット ---------- */
-  const LIST_QUERY = `query NddNoteList($unit: DashboardPeriodUnit!, $date: Datetime!, $order: DashboardNoteListOrder, $first: Int!, $after: String) {
-    dashboardNoteListConnection(unit: $unit, date: $date, order: $order, first: $first, after: $after) {
+  const LIST_QUERY = `query NddNoteList($unit: DashboardPeriodUnit!, $date: Datetime!, $endDate: Datetime, $order: DashboardNoteListOrder, $first: Int!, $after: String) {
+    dashboardNoteListConnection(unit: $unit, date: $date, endDate: $endDate, order: $order, first: $first, after: $after) {
       pageInfo { hasNextPage endCursor }
       edges { node {
         note { title status publishedAt link { absoluteUrl } }
@@ -93,16 +112,24 @@
     dashboardStatLastUpdatedTimes { id noteStatLastUpdatedAt }
   }`;
 
-  /** 記事一覧（数値つき）を読む。毎日の記録と、6時間ごとのコメント数の確認（K）で使う */
-  async function fetchList(day) {
+  /* v0.7.1：累計は CUSTOM（2014/4/1〜その日）で聞く。
+   * note の ALL（全期間）は崩れることがある（2026/10/1 から9月の分を数えていない・1か月より前の日は約1か月前の値が返る）。
+   * CUSTOM は ALL が正しいときは同じ値で、問い合わせの数も同じ（2026/10/2 に本物で確かめた）。
+   * 始めの日は note が始まる前の固定の日（最初の記事の日から聞いても同じ答え）。 */
+  const CUSTOM_FROM = '2014-04-01T00:00:00.000Z';
+  /** その日（日本時間の日付）の終わり時点の累計を聞く変数 */
+  const listVars = (day) => ({ unit: 'CUSTOM', date: CUSTOM_FROM, endDate: `${day}T00:00:00.000Z`, order: 'PUBLISHED_DATE_DESC', first: 100 });
+
+  /** 記事一覧（数値つき）を読む。毎日の記録・記録の確定・6時間ごとのコメント数の確認（K）・過去の記録を埋める で使う */
+  async function fetchList(day, vars = listVars, gap = INTERVAL_MS) {
     const today = day || jstToday();
     const items = [];
     let after = null;
     let statUpdatedAt = null;
     for (let page = 0; page < 50; page++) {
-      const v = { unit: 'ALL', date: `${today}T00:00:00.000Z`, order: 'PUBLISHED_DATE_DESC', first: 100 };
+      const v = vars(today);
       if (after) v.after = after;
-      const data = await gql(LIST_QUERY, v);
+      const data = await gql(LIST_QUERY, v, gap > INTERVAL_MS ? 3 : 4, gap);
       const conn = data.dashboardNoteListConnection;
       statUpdatedAt = statUpdatedAt || (data.dashboardStatLastUpdatedTimes && data.dashboardStatLastUpdatedTimes.noteStatLastUpdatedAt) || null;
       for (const e of conn.edges || []) {
@@ -131,6 +158,7 @@
       followerCount: me && typeof me.followerCount === 'number' ? me.followerCount : null,
       totals: { imp: sum('imp'), pv: sum('pv'), like: sum('like'), comment: sum('comment'), sales: sum('sales'), articles: items.length },
       items,
+      via: 'custom', // v0.7.1：CUSTOM で取った印（項目を足すだけ）
     };
     await send('SAVE_SNAPSHOT', { snapshot });
     return snapshot;
@@ -510,7 +538,7 @@
   }
 
   /* ---------- 前の日の記録の確定（v0.6.2 M） ----------
-   * 毎日の記録と同じ問い合わせで、日付だけ過去にすると「その日の終わり時点の累計」が返る（2026/9/30 に本物で確かめた）。
+   * 毎日の記録と同じ問い合わせ（v0.7.1 から CUSTOM）で、終わりの日を過去にすると「その日の終わり時点の累計」が返る。
    * まだ確定していない過去の記録の日を、1回に最大30日分、その値に直す。今日の記録は確定しない。
    * noteの集計の時刻（noteStatLastUpdatedAt）が、確定したい日の次の日（日本時間）になっていなければ、次の記録のときに回す。 */
   const FINAL_MAX_DAYS = 30;
@@ -519,6 +547,7 @@
   const FINAL_SAFE_DAYS = 28;
   const addDaysJ = (d, n) => { const t = new Date(`${d}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
   const FINAL_WAIT_MS = 30 * 60e3; // 集計が進んでいなかったときは、30分は問い合わせない
+  const CUSTOM_FIX_FROM = '2026-10-01'; // この日から、ALL で記録した日を直す（v0.7.1）
   const jstDateOf = (iso) => { const t = new Date(iso).getTime(); return Number.isNaN(t) ? '' : new Date(t + 9 * 3600e3).toISOString().slice(0, 10); };
   const statReady = (stat, day) => !!stat && jstDateOf(stat) > day;
   async function finalizePast(state, snap) {
@@ -553,6 +582,29 @@
     return { done, waiting, failed, total: dates.length };
   }
 
+  /* ---------- 10月からの誤った記録の直し（v0.7.1） ----------
+   * 0.7.0・β版 0.6.3 は ALL で記録していたので、2026/10/1 以降の記録が小さい（9月の分が抜けている）。
+   * CUSTOM の印が無い 2026/10/1 以降の過去の日を、確定済みでも CUSTOM で確定し直す（1回に最大30日分）。
+   * 今日の記録は、毎日の記録を取り直して直す（run の needSnapshot）。 */
+  async function fixAllDays(state) {
+    const { dates } = await send('CUSTOM_FIX_CANDIDATES', { today: jstToday(), max: FINAL_MAX_DAYS });
+    if (!dates || !dates.length) return { done: 0, waiting: 0 };
+    let done = 0, waiting = 0;
+    for (const d of dates) {
+      let r;
+      try { r = await fetchList(d); } catch (e) {
+        if (String(e.message).includes('NOT_LOGGED_IN')) throw e;
+        await send('CUSTOM_FIX_FAIL', { date: d, reason: e.message }); continue;
+      }
+      if (!statReady(r.statUpdatedAt, d)) { waiting++; continue; }
+      if (!r.items.length) break; // ログインの印が古い可能性（次の記録のときに）
+      if (r.items.some((i) => i.publishedAt && jstDateOf(i.publishedAt) > d)) { await send('CUSTOM_FIX_FAIL', { date: d, reason: 'noteがその日の数字を返さなかった（その日より後の記事が入っていた）' }); continue; }
+      const res = await send('SAVE_FINAL', { date: d, items: r.items, statUpdatedAt: r.statUpdatedAt, refix: true });
+      if (res && res.done) done++;
+    }
+    return { done, waiting };
+  }
+
   /** 6時間ごと：「自分のコメントへの返信（未確認）」が残っている他人の記事を確かめ直す（自分が最後に返信したら外すため） */
   async function recheckOtherThreads(state, me) {
     if (typeof PenThreads === 'undefined') return 0;
@@ -578,7 +630,7 @@
 
   let running = false;
   async function run({ force = false } = {}) {
-    if (running) return;
+    if (running || bfRunning) return;
     running = true;
     if (!(await waitForToken())) { running = false; return; } // 未ログイン、またはトークン未発行のページ
     let locked = false;
@@ -608,11 +660,21 @@
       if (!cur.fetched && (!state.me || state.me.urlname !== me.urlname || needSnapshot || Date.now() - (state.me.updatedAt || 0) > 24 * 3600e3)) me = await fetchMe();
       if (cur.fetched || me !== state.me) await send('SAVE_ME', me);
 
+      // v0.7.1：今日の記録が CUSTOM で取ったものでなければ（0.7.0 の ALL の記録・復元した β版の記録）、取り直す
+      const refixToday = !needSnapshot && s.autoCollect && state.latestSnapshot && state.latestSnapshot.date === jstToday() && state.latestSnapshot.date >= CUSTOM_FIX_FROM && state.latestSnapshot.via !== 'custom';
+      if (refixToday) needSnapshot = true;
       let snap = null;
       if (needSnapshot) {
         snap = await collectSnapshot(me);
         log('info', `毎日の記録をしました（${snap.items.length}記事）`);
       }
+
+      // v0.7.1：10月からの誤った記録を、CUSTOM で直す（前の日の確定より先に）
+      try {
+        const fx = await fixAllDays((await send('GET_STATE')).state);
+        const n = fx.done + (refixToday ? 1 : 0);
+        if (n) log('info', `10月からの記録を、noteの正しい累計で直しました（${n}日分${fx.waiting ? `、noteの集計を待っている日 ${fx.waiting}日` : ''}）`);
+      } catch (e) { if (String(e.message).includes('NOT_LOGGED_IN')) throw e; log('warn', `10月からの記録の直しに失敗: ${e.message}`); }
 
       // v0.6.2 M：前の日の記録を「その日の終わり」の値に直す
       try {
@@ -654,11 +716,98 @@
       if (locked) { holding = false; await send('RELEASE_LOCK').catch(() => {}); }
       send('RUN_DONE').catch(() => {});
       running = false;
+      setTimeout(() => { runBackfill().catch(() => {}); }, 0); // 過去の記録を埋めている途中なら、続きから（v0.7.1。try の中で return しても必ず）
+    }
+  }
+
+  /* ---------- 過去の記録を埋める（v0.7.1 ストア公開記念の特典。backfill.js） ----------
+   * 画面で「始める」を押すと、このタブ（note.com）で、日ごとに「2014/4/1〜その日」の累計（CUSTOM）を 1.2秒以上あけて取る。
+   * 取った日は Pen の中（まだ記録は変えない）に置き、全部取れたら照合する。書き込みは画面で「埋める」を押したとき。
+   * 途中で閉じても、次に note を開いたときに続きから。ほかの記録と同じ順番待ちの印（lock）を持つ（ほかのタブと同時に問い合わせない） */
+  const BF_GAP_MS = 1250;
+  const BF_REFRESH_MS = 3 * 60e3; // ログインの印は10分ほどで古くなり、古いと0件で返る。3分ごとに新しくする
+  let bfRunning = false, lastRefresh = Date.now();
+  /** 見えない枠で note のトップを読み込み、新しいログインの印を受け取る */
+  async function refreshLogin() {
+    const before = gqlToken();
+    const f = document.createElement('iframe');
+    f.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;border:0';
+    f.setAttribute('aria-hidden', 'true');
+    const loaded = new Promise((r) => { f.onload = r; });
+    f.src = '/';
+    document.body.appendChild(f);
+    await Promise.race([loaded, wsleep(20000)]);
+    for (let i = 0; i < 10 && gqlToken() === before; i++) await wsleep(500);
+    f.remove();
+    lastRefresh = Date.now();
+    lastRequestAt = Date.now();
+    return gqlToken() !== before;
+  }
+  const bfSend = async (type, payload) => { const r = await send(type, payload); if (r && r.ok === false) throw new Error(r.error || type); return r; };
+  async function bfList(day, vars) {
+    let r = await fetchList(day, vars, BF_GAP_MS);
+    if (!r.items.length) { await refreshLogin(); r = await fetchList(day, vars, BF_GAP_MS); }
+    return r;
+  }
+  async function runBackfill() {
+    if (bfRunning || running || !gqlToken()) return;
+    let st = (await send('BACKFILL_STATE')).state;
+    if (!st || !['requested', 'running', 'checking'].includes(st.status)) return;
+    bfRunning = true;
+    let locked = false;
+    try {
+      const lock = await send('ACQUIRE_LOCK', { ttlMs: 3 * 60e3 });
+      if (!lock.granted) return; // ほかのタブで記録中（そちらが終わったら、次に開いたときに）
+      locked = true; holding = true;
+      const cur = await currentAccount((await send('GET_STATE')).state);
+      const chk = await send('ACCOUNT_CHECK', { me: cur.me });
+      if (!chk.ok) { await send('BACKFILL_PAUSE', { reason: `別のアカウント（@${cur.me.urlname}）でログイン中なので始めませんでした（記録するアカウントは @${chk.account && chk.account.urlname}）。` }); return; }
+      if (st.status === 'requested') {
+        const now = await bfList(jstToday());
+        if (!now.items.length) { await send('BACKFILL_PAUSE', { reason: 'noteの記事一覧が空で返ってきました。noteのページを読み込み直してから、もう一度「始める」を押してください。' }); return; }
+        const first = now.items.map((i) => jstDateOf(i.publishedAt)).filter(Boolean).sort()[0];
+        const today = jstToday(), yest = addDaysJ(today, -1);
+        const end = statReady(now.statUpdatedAt, yest) ? yest : addDaysJ(today, -2); // 今日（と集計の途中の昨日）は入れない
+        st = (await bfSend('BACKFILL_INIT', { first, end, today, urlname: cur.me.urlname, articles: now.items.length })).state;
+      }
+      let empty = 0;
+      while (st && st.status === 'running' && st.queue && st.queue.length) {
+        const d = st.queue[0];
+        if (Date.now() - lastRefresh > BF_REFRESH_MS) await refreshLogin();
+        await send('ACQUIRE_LOCK', { ttlMs: 3 * 60e3 });
+        let r = null, err = '';
+        for (let i = 1; i <= 3 && !r; i++) {
+          try { r = await bfList(d); } catch (e) { if (String(e.message).includes('NOT_LOGGED_IN')) throw e; err = e.message; await wsleep(3000 * i); }
+        }
+        if (!r) { st = (await send('BACKFILL_FAIL', { date: d, reason: err })).state; continue; }
+        if (!r.items.length) {
+          if (++empty >= 3) { await send('BACKFILL_PAUSE', { reason: '3日続けて記事一覧が空で返ってきたので止めました（ログインの印を新しくしても直りませんでした）。noteのページを読み込み直すと、続きから始まります。' }); return; }
+          st = (await send('BACKFILL_FAIL', { date: d, reason: '記事一覧が空で返ってきた' })).state; continue;
+        }
+        empty = 0;
+        st = (await bfSend('BACKFILL_DAY', { date: d, items: r.items.filter((i) => !(i.publishedAt && jstDateOf(i.publishedAt) > d)) })).state;
+      }
+      if (st && st.status === 'checking') {
+        // 照合：前の日との差と DAY（その日に増えた数）、直近の日と ALL（全期間）
+        const { plan } = await send('BACKFILL_CHECK_PLAN');
+        const day = {}, all = {};
+        for (const d of plan.day || []) { try { day[d] = (await bfList(d, (x) => ({ unit: 'DAY', date: `${x}T00:00:00.000Z`, order: 'PUBLISHED_DATE_DESC', first: 100 }))).items; } catch (e) { if (String(e.message).includes('NOT_LOGGED_IN')) throw e; } }
+        for (const d of plan.all || []) { try { all[d] = (await bfList(d, (x) => ({ unit: 'ALL', date: `${x}T00:00:00.000Z`, order: 'PUBLISHED_DATE_DESC', first: 100 }))).items; } catch (e) { if (String(e.message).includes('NOT_LOGGED_IN')) throw e; } }
+        st = (await bfSend('BACKFILL_CHECKS', { day, all })).state;
+        log('info', st.status === 'ready' ? `過去の記録を埋める準備ができました（${st.summary && st.summary.days}日分。Penの画面の設定で「埋める」を押すと書き込みます）` : '過去の記録を埋める：確かめで合わない所があったので、書き込みませんでした（Penの画面の設定に理由があります）');
+      }
+    } catch (e) {
+      if (String(e.message).includes('NOT_LOGGED_IN')) await send('BACKFILL_PAUSE', { reason: 'noteのログインが切れました。noteにログインしてページを開き直すと、続きから始まります。' }).catch(() => {});
+      else { log('warn', `過去の記録を埋める：${e.message}`); await send('BACKFILL_PAUSE', { reason: e.message }).catch(() => {}); }
+    } finally {
+      if (locked) { holding = false; await send('RELEASE_LOCK').catch(() => {}); }
+      bfRunning = false;
     }
   }
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (msg && msg.type === 'RUN') { run({ force: !!msg.force }).then(() => sendResponse({ ok: true })); return true; }
+    if (msg && msg.type === 'BACKFILL_RUN') { sendResponse({ ok: true }); runBackfill(); return false; }
   });
 
   /**
@@ -666,7 +815,7 @@
    * 画面が見えているときだけ。ほかのタブで記録中なら何もしない（1回の問い合わせ）
    */
   async function quickTick() {
-    if (running || document.hidden || !gqlToken()) return;
+    if (running || bfRunning || document.hidden || !gqlToken()) return;
     running = true;
     let locked = false;
     try {

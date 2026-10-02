@@ -31,7 +31,7 @@ const PenStore = (() => {
     return {
       me,
       settings: { ...DEFAULT_SETTINGS, ...settings },
-      latestSnapshot: latest && { date: latest.date, account: latest.account || '', items: latest.items.map((i) => ({ key: i.key, title: i.title, url: i.url, comment: i.comment, publishedAt: i.publishedAt })) },
+      latestSnapshot: latest && { date: latest.date, account: latest.account || '', via: latest.via || '', items: latest.items.map((i) => ({ key: i.key, title: i.title, url: i.url, comment: i.comment, publishedAt: i.publishedAt })) },
       checked: Object.fromEntries(unreplied.map((u) => [u.noteKey, u.checkedCommentCount])),
       lastCommentCheckAt, lastNoticeScanAt, lastNoticeSeenAt, pageChecks, forceRun, commentCheckIncomplete, noticeScanVersion,
       bodyKeys, bodyQueue, perk, perkForce, accountSeen, threadReplies,
@@ -189,8 +189,11 @@ const PenStore = (() => {
   async function finalizeSnapshot(date, noteItems, meta = {}) {
     const cur = await NDB.get('snapshots', date);
     if (!cur) return { done: false, reason: '記録がない日' };
-    if (cur.final) { await markFinalDone(date); return { done: false, reason: '確定済み' }; }
-    const list = (noteItems || []).filter((i) => i && i.key);
+    // meta.refix（v0.7.1）：ALL で記録・確定した 10月からの日を、CUSTOM で確定し直す（確定済みでも）
+    if (cur.final && !(meta.refix && !isCustom(cur))) { await markFinalDone(date); return { done: false, reason: '確定済み' }; }
+    // その日より後に公開した記事は、その日の記録に入れない（noteの答えにも、Penの記録にも。v0.7.1）
+    const later = (i) => i && i.publishedAt && jstDateOf(i.publishedAt) > date;
+    const list = (noteItems || []).filter((i) => i && i.key && !later(i));
     if (!list.length) return { done: false, reason: 'noteの答えが空' };
     const arts = new Map((await NDB.getAll('articles')).map((a) => [a.key, a]));
     const items = PenData.calc.hydrate(cur, (k) => arts.get(k));
@@ -199,6 +202,7 @@ const PenStore = (() => {
     for (const it of items) {
       if (!it.key || seen.has(it.key)) continue; // 重なった記事は1つにする
       seen.add(it.key);
+      if (later(it)) continue;
       const n = byKey.get(it.key);
       if (!n) { out.push(it); missing.push(it.key); continue; } // noteの答えに無い記事（あとで消した記事など）は Pen の数字を残す
       if (FINAL_NUMS.some((c) => (Number(n[c]) || 0) < (Number(it[c]) || 0))) smaller.push(it.key);
@@ -215,13 +219,50 @@ const PenStore = (() => {
     const snap = {
       ...rest, items: all,
       totals: { ...(cur.totals || {}), imp: sum('imp'), pv: sum('pv'), like: sum('like'), comment: sum('comment'), sales: sum('sales'), articles: all.length },
-      final: true, finalizedAt: new Date().toISOString(), finalSource: 'note-day-end',
+      final: true, finalizedAt: new Date().toISOString(), finalSource: meta.source || 'note-custom',
     };
     if (meta.statUpdatedAt) snap.finalStatUpdatedAt = meta.statUpdatedAt;
+    if (cur.final && meta.refix) snap.refixedAt = snap.finalizedAt; // 直した印（項目を足すだけ）
     await PenData.save(snap);
     await markFinalDone(date);
     const f = await NDB.kvGet('finalFail', {}); if (f[date]) { delete f[date]; await NDB.kvSet('finalFail', f); }
     return { done: true, missing, smaller, added: extra.length };
+  }
+
+  /* ---------- 10月からの誤った記録の直し（v0.7.1） ----------
+   * note の ALL（全期間）が 2026/10/1 から9月の分を数えていないので、0.7.0・β版 0.6.3 の 10/1 以降の記録は小さい。
+   * CUSTOM の印（via: 'custom'・finalSource: 'note-custom'）が無い 10/1 以降の日を、CUSTOM で確定し直す。
+   * 引っ越し用ファイル・バックアップを復元したあとも、同じ条件で直る。
+   * kv 'customFixSkip'：直さないと決めた日（別のアカウントの記録・3回失敗）、kv 'customFixFail'：失敗の回数 */
+  const CUSTOM_FIX_FROM = '2026-10-01';
+  const jstDateOf = (iso) => { const t = new Date(iso).getTime(); return Number.isNaN(t) ? '' : new Date(t + 9 * 3600e3).toISOString().slice(0, 10); };
+  const isCustom = (r) => !!r && (r.via === 'custom' || r.finalSource === 'note-custom');
+  async function customFixCandidates(today, max = 30) {
+    const acc = await recordAccount();
+    if (!acc || !acc.urlname) return { dates: [], skipped: [] };
+    const skip = new Set(await NDB.kvGet('customFixSkip', []));
+    const recs = await NDB.getRange('snapshots', CUSTOM_FIX_FROM, null);
+    const dates = [], skipped = [], add = [];
+    let arts = null;
+    for (const r of recs.sort((a, b) => b.date.localeCompare(a.date))) {
+      const d = r.date;
+      if (d < CUSTOM_FIX_FROM || d >= today || skip.has(d) || isCustom(r)) continue;
+      if (!r.account && !arts) arts = new Map((await NDB.getAll('articles')).map((a) => [a.key, a]));
+      const why = finalBlock(r, acc.urlname, arts);
+      if (why) { add.push(d); skipped.push({ date: d, reason: why }); continue; }
+      dates.push(d);
+      if (dates.length >= max) break;
+    }
+    if (add.length) await NDB.kvSet('customFixSkip', [...skip, ...add]);
+    return { dates, skipped };
+  }
+  async function customFixFailed(date) {
+    const f = await NDB.kvGet('customFixFail', {});
+    f[date] = (f[date] || 0) + 1;
+    const giveUp = f[date] >= FINAL_GIVE_UP;
+    if (giveUp) { delete f[date]; const s = await NDB.kvGet('customFixSkip', []); if (!s.includes(date)) { s.push(date); await NDB.kvSet('customFixSkip', s); } }
+    await NDB.kvSet('customFixFail', f);
+    return giveUp;
   }
 
   /** 毎日の記録（v0.6.2 からは新しい形で書く。古い形で届いても data.js が新しい形にする） */
@@ -288,5 +329,5 @@ const PenStore = (() => {
     return { granted: true, last };
   }
 
-  return { DEFAULT_SETTINGS, patchSettings, getState, mergeMyComment, saveMe, accountOfUrl, recordAccount, checkAccount, gateOk, stamp, changeAccount, saveSnapshot, saveUnreplied, saveMyComments, saveThreadReplies, saveThreads, saveBody, appendLog, unrepliedCount, claimQuickNotice, finalCandidates, finalizeSnapshot, finalFailed, ownsItems, finalBlock };
+  return { DEFAULT_SETTINGS, patchSettings, getState, mergeMyComment, saveMe, accountOfUrl, recordAccount, checkAccount, gateOk, stamp, changeAccount, saveSnapshot, saveUnreplied, saveMyComments, saveThreadReplies, saveThreads, saveBody, appendLog, unrepliedCount, claimQuickNotice, finalCandidates, finalizeSnapshot, finalFailed, ownsItems, finalBlock, CUSTOM_FIX_FROM, isCustom, customFixCandidates, customFixFailed };
 })();

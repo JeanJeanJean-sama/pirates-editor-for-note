@@ -75,21 +75,24 @@ async function gql(query, variables) {
 }
 
 /* ---------- 取得処理（拡張機能の content.js と同じ内容） ---------- */
-const LIST_QUERY = `query PenWebList($unit: DashboardPeriodUnit!, $date: Datetime!, $order: DashboardNoteListOrder, $first: Int!, $after: String) {
-  dashboardNoteListConnection(unit: $unit, date: $date, order: $order, first: $first, after: $after) {
+const LIST_QUERY = `query PenWebList($unit: DashboardPeriodUnit!, $date: Datetime!, $endDate: Datetime, $order: DashboardNoteListOrder, $first: Int!, $after: String) {
+  dashboardNoteListConnection(unit: $unit, date: $date, endDate: $endDate, order: $order, first: $first, after: $after) {
     pageInfo { hasNextPage endCursor }
     edges { node { note { title status publishedAt link { absoluteUrl } } metrics { pageViewCount impressionCount likeCount commentCount salesAmount } } }
   }
   dashboardStatLastUpdatedTimes { id noteStatLastUpdatedAt }
 }`;
 
+/* v0.7.1：累計は CUSTOM（2014/4/1〜その日）で聞く（拡張機能の content.js と同じ。note の ALL は崩れることがあるため） */
+const CUSTOM_FROM = '2014-04-01T00:00:00.000Z';
+const CUSTOM_FIX_FROM = '2026-10-01'; // この日からの、ALL で記録した日を直す
 /** 記事一覧（数値つき）。day を過去の日にすると「その日の終わり時点の累計」（v0.6.2 M） */
 async function listFor(day) {
   const today = day;
   const items = [];
   let after = null, statUpdatedAt = null;
   for (let page = 0; page < 50; page++) {
-    const v = { unit: 'ALL', date: `${today}T00:00:00.000Z`, order: 'PUBLISHED_DATE_DESC', first: 100 };
+    const v = { unit: 'CUSTOM', date: CUSTOM_FROM, endDate: `${today}T00:00:00.000Z`, order: 'PUBLISHED_DATE_DESC', first: 100 };
     if (after) v.after = after;
     const d = await gql(LIST_QUERY, v);
     const c = d.dashboardNoteListConnection;
@@ -110,7 +113,7 @@ async function collectSnapshot(me) {
   const { items, statUpdatedAt } = await listFor(today);
   const sum = (k) => items.reduce((a, i) => a + i[k], 0);
   return { date: today, capturedAt: new Date().toISOString(), statUpdatedAt, followerCount: me.followerCount ?? null,
-    totals: { imp: sum('imp'), pv: sum('pv'), like: sum('like'), comment: sum('comment'), sales: sum('sales'), articles: items.length }, items };
+    totals: { imp: sum('imp'), pv: sum('pv'), like: sum('like'), comment: sum('comment'), sales: sum('sales'), articles: items.length }, items, via: 'custom' };
 }
 
 function astToText(node) {
@@ -246,6 +249,10 @@ async function main() {
     // noteが「その日の終わり時点の累計」を正しく返すのは直近の約1か月だけ（2026/10/1 に本物で確かめた）。28日より前の日は確定しない
     const minD = addDays(snapshot.date, -28);
     cands = [...new Set(cands)].filter((d) => d >= minD && !st.finalSent.includes(d)).sort().reverse().slice(0, 10);
+    // v0.7.1：10/1 から昨日までの日を、1回だけ CUSTOM で送る（Web版の側で、ALL で記録した日だけ直す。記録のない日は作らない）。1回に10日まで
+    if (!st.customQueue) { st.customQueue = []; for (let d = CUSTOM_FIX_FROM; d < snapshot.date; d = addDays(d, 1)) st.customQueue.push(d); }
+    const fixNow = st.customQueue.filter((d) => !cands.includes(d)).sort().reverse().slice(0, 10);
+    cands = [...cands, ...fixNow];
     const known = new Set(snapshot.items.map((i) => i.key));
     for (const d of cands) {
       if (ui.state.cancelled) return;
@@ -254,7 +261,8 @@ async function main() {
       try {
         const r = await listFor(d);
         if (!r.items.length) continue;
-        if (r.items.some((i) => i.publishedAt && jstDateOf(i.publishedAt) > d)) { st.finalSent.push(d); continue; } // 別の日の値が返った（古すぎる日）
+        if (r.items.some((i) => i.publishedAt && jstDateOf(i.publishedAt) > d)) { st.finalSent.push(d); st.customQueue = st.customQueue.filter((x) => x !== d); continue; } // 別の日の値が返った
+        st.customQueue = st.customQueue.filter((x) => x !== d);
         finals.push({ date: d, statUpdatedAt: r.statUpdatedAt, cols: ['key', 'imp', 'pv', 'like', 'comment', 'sales'], rows: r.items.map((i) => [i.key, i.imp, i.pv, i.like, i.comment, i.sales]),
           arts: r.items.filter((i) => !known.has(i.key)).map((i) => ({ key: i.key, title: i.title, url: i.url, status: i.status, publishedAt: i.publishedAt })) });
         st.finalSent.push(d);
@@ -340,7 +348,7 @@ async function main() {
     if (ui.state.cancelled) return;
 
     ui.set('Penに渡しています…');
-    const payload = { app: 'pen-web', v: 1, cid: SELF_ID, me, snapshot, unreplied, myComments: n.myComments, threads, lookAt: Date.now(), finals,
+    const payload = { app: 'pen-web', v: 1, cid: SELF_ID, via: 'custom', me, snapshot, unreplied, myComments: n.myComments, threads, lookAt: Date.now(), finals,
       perk: perk ? { ...perk, scannedKeys: undefined } : null,
       logs: ui.state.skipComments ? [{ level: 'info', message: 'コメント確認の残りは次回に後回しにしました' }] : [] };
     const encoded = await encodePayload(payload);

@@ -1,5 +1,5 @@
 /* sw.js — オフラインでも開けるようにする（画面のファイルだけを保存。記録データは扱わない） */
-const CACHE = 'pen-web-0.7.0';
+const CACHE = 'pen-web-0.7.1';
 const FILES = ['./', 'index.html', 'install.html', 'privacy.html', 'manifest.webmanifest',
   'app/env.js', 'app/db.js', 'app/data.js', 'app/store.js', 'app/threads.js', 'app/backup.js', 'app/web.js', 'app/dashboard.js', 'app/periods.js', 'app/views.js', 'app/cardtrend.js', 'app/share.js', 'app/search.js', 'app/calendar.js', 'app/missions.js', 'app/features.js', 'app/account.js', 'app/beta.js', 'app/colors.js', 'app/settings.js', 'app/guide.js', 'app/bodies.js', 'app/perks.js', 'app/theme-boot.js', 'app/webapp.js', 'app/dashboard.css',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png', 'icons/apple-touch-icon.png', 'icons/pen-logo.svg'];

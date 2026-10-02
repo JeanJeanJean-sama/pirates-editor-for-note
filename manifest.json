@@ -3,7 +3,7 @@
   "name": "Pirates' Editor for note",
   "short_name": "Pen",
   "description": "自分のnoteの数値（PV・スキ・コメントなど）を毎日記録・分析する道具。推移、伸びた記事、未返信コメントを表示します。データはブラウザ内にだけ記録します。note公式のサービスではありません。",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "homepage_url": "https://github.com/jeanjeanjean-sama/pirates-editor-for-note",
   "minimum_chrome_version": "116",
   "permissions": [

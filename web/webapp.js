@@ -50,6 +50,7 @@ async function importFromHash() {
     return;
   }
   const acc = chk.account.urlname;
+  const custom = data.via === 'custom'; // v0.7.1 のブックマークレット（CUSTOM で取った数字）
   const st = (r) => PenStore.stamp(r, acc);
   await PenStore.saveMe(data.me);
   await PenStore.saveSnapshot(st(data.snapshot));
@@ -58,21 +59,24 @@ async function importFromHash() {
   // v0.6.2 M：前の日の記録の確定（Web版に記録がある日だけ。記録のない日は作らない）
   if (data.finals && data.finals.length) {
     const meta = new Map([...(data.snapshot.items || []).map((i) => [i.key, i]), ...data.finals.flatMap((f) => (f.arts || []).map((a) => [a.key, a]))]);
-    let fin = 0;
+    let fin = 0, fixed = 0;
     for (const f of data.finals) {
       const ci = Object.fromEntries((f.cols || []).map((c, i) => [c, i]));
       const items = (f.rows || []).map((r) => { const k = r[ci.key], m = meta.get(k) || {}; return { key: k, title: m.title || '', url: m.url || '', status: m.status || '', publishedAt: m.publishedAt || '', imp: r[ci.imp] || 0, pv: r[ci.pv] || 0, like: r[ci.like] || 0, comment: r[ci.comment] || 0, sales: r[ci.sales] || 0 }; });
       const cur = await NDB.get('snapshots', f.date);
-      if (!cur || cur.final) continue;
+      // v0.7.1：新しいブックマークレット（CUSTOM）の答えなら、10/1 からの ALL で記録した日を、確定済みでも直す
+      const refix = custom && cur && f.date >= PenStore.CUSTOM_FIX_FROM && !PenStore.isCustom(cur);
+      if (!cur || (cur.final && !refix)) continue;
       const why = PenStore.finalBlock(cur, acc, new Map((await NDB.getAll('articles')).map((a) => [a.key, a])));
       if (why) { await PenStore.appendLog('warn', `${f.date} の記録は確定しませんでした（${why}）`); continue; }
-      const r = await PenStore.finalizeSnapshot(f.date, items, { statUpdatedAt: f.statUpdatedAt });
+      const r = await PenStore.finalizeSnapshot(f.date, items, { statUpdatedAt: f.statUpdatedAt, refix, source: custom ? 'note-custom' : 'note-day-end' });
       if (!r.done) continue;
-      fin++;
+      if (refix && f.date >= PenStore.CUSTOM_FIX_FROM) fixed++; else fin++;
       if (r.missing.length) await PenStore.appendLog('warn', `${f.date} の確定：noteの答えに無い記事が ${r.missing.length}件あったので、Penの数字を残しました`);
       if (r.smaller.length) await PenStore.appendLog('warn', `${f.date} の確定：noteの数字がPenの記録より小さい記事が ${r.smaller.length}件ありました。noteの数字を使いました`);
     }
     if (fin) await PenStore.appendLog('info', `前の日の記録を確定しました（${fin}日分）`);
+    if (fixed) await PenStore.appendLog('info', `10月からの記録を、noteの正しい累計で直しました（${fixed}日分）`);
   }
   if (data.lookAt) await NDB.kvSet('lastCommentLookAt', data.lookAt); // v0.6.2 K：最後にコメントを確かめた時刻
   if (data.threadReplies && data.threadReplies.length) await PenStore.saveThreadReplies(data.threadReplies); // 0.6.1 までのブックマークレット

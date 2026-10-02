@@ -55,6 +55,8 @@ must('<script src="settings.js"></script>', '<script src="app/settings.js"></scr
 must('<script src="guide.js"></script>', '<script src="app/guide.js"></script>');
 must('<script src="bodies.js"></script>', '<script src="app/bodies.js"></script>');
 must('<script src="perks.js"></script>', '<script src="app/perks.js"></script>\n<script src="app/webapp.js"></script>');
+// 過去の記録を埋める（v0.7.1 ストア公開記念の特典・将来の有料機能）は拡張機能版だけ。Web版には入れない
+must('<script src="backfill.js"></script>\n<script src="backfill-ui.js"></script>\n', '');
 must('<script src="theme-boot.js"></script>', '<script src="app/theme-boot.js"></script>');
 must(`<h1>Pirates' Editor for note <span class="meta">Pen</span></h1>`, `<h1>Pirates' Editor for note <span class="meta">Pen Web</span></h1>`);
 writeFileSync(join(OUT, 'index.html'), html);
