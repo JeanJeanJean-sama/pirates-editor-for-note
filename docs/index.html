@@ -259,6 +259,68 @@
 
   <section id="tab-crew" class="tab" hidden>
     <div class="card perk-status" id="perkStatus"></div>
+    <div class="card enlist-top" id="enlistTop" hidden>
+      <div class="card-head"><h2>🦇 魔王軍入隊証</h2></div>
+      <button type="button" class="enlist-thumb" id="enlistOpen" aria-label="魔王軍入隊証を大きく見る"><span class="wanted enlist" id="enlistView" aria-label="魔王軍入隊証"></span></button>
+      <p class="meta enlist-tip">押すと大きく表示します。</p>
+      <p class="hint" id="enlistGift" hidden></p>
+    </div>
+    <div class="enlist-zoom" id="enlistZoom" hidden role="dialog" aria-modal="true" aria-label="魔王軍入隊証（大きく表示）"><img id="enlistZoomImg" alt=""><button type="button" class="btn enlist-zoom-close" data-action="enlist-zoom-close">閉じる</button></div>
+    <div class="card demon-card" id="demonCard">
+      <div class="perk-status" id="demonStatus"></div>
+      <div id="demonFields" hidden>
+        <div class="card-head"><h2>入隊証の作り方</h2><button type="button" class="btn small" data-action="enlist-fold" aria-expanded="true">たたむ</button></div>
+        <div id="demonBody">
+          <p class="card-pick enlist-modes" role="radiogroup" aria-label="入隊証の作り方">
+            <label><input type="radio" name="enlistMode" value=""> <b><span class="tool-name">この拡張機能</span>で作る</b><span class="meta">魔王軍の入隊証の枠に、名前・ジョブ名・固有スキル・入隊日と、好きな写真を入れます。</span></label>
+            <label><input type="radio" name="enlistMode" value="own"> <b>自分で作った入隊証の画像を飾る</b><span class="meta">ChatGPT などで作った入隊証の画像を、そのまま飾ります（横長・縦長どちらも）。</span></label>
+          </p>
+          <div class="enlist-own" id="enlistOwnBox" hidden>
+            <h3 class="subhead">入隊証の画像</h3>
+            <p class="btn-row"><label class="btn primary">入隊証の画像を選ぶ<input type="file" accept="image/*" data-img-pick="enlistOwn" hidden></label> <button type="button" class="btn" data-img-clear="enlistOwn" hidden>外す</button></p>
+            <p class="meta" id="enlistOwnState"></p>
+          </div>
+          <div class="demon-grid">
+            <div>
+              <h3 class="subhead">ジョブ名</h3>
+              <p class="hint">魔王軍での役目です（16文字まで）。画面の上の名前の前に出ます<span class="make-only">。入隊証にも載ります</span>。</p>
+              <p><input type="text" id="jobInput" class="epithet-input" maxlength="32" placeholder="例：暗黒騎士" aria-label="ジョブ名" autocomplete="off"></p>
+              <p class="epithet-ideas" id="jobIdeas"></p>
+              <p class="meta" id="jobMsg" role="status"></p>
+            </div>
+            <div>
+              <h3 class="subhead">固有スキル</h3>
+              <p class="hint">あなただけの妙な能力です（20文字まで）。画面の上の名前の後ろに出ます<span class="make-only">。入隊証にも載ります</span>。</p>
+              <p><input type="text" id="skillInput" class="epithet-input" maxlength="40" placeholder="例：誤字を見抜く魔眼" aria-label="固有スキル" autocomplete="off"></p>
+              <p class="epithet-ideas" id="skillIdeas"></p>
+              <p class="meta" id="skillMsg" role="status"></p>
+            </div>
+            <div class="make-only">
+              <h3 class="subhead">入隊日</h3>
+              <p class="hint">好きな日を書けます（20文字まで。例：「西暦452年 2月23日」「気が向いた日」）。空のときは、記録を始めた日になります。</p>
+              <p><input type="text" id="enlistInput" class="epithet-input" maxlength="40" aria-label="入隊日" autocomplete="off"> <button type="button" class="btn small" data-action="enlist-first">記録の初日にする</button></p>
+              <p class="meta" id="enlistMsg" role="status"></p>
+            </div>
+          </div>
+          <div class="demon-grid make-only">
+            <div>
+              <h3 class="subhead">形</h3>
+              <p class="card-pick" role="radiogroup" aria-label="入隊証の形">
+                <label><input type="radio" name="enlistLayout" value="land"> 横長（1200×800）</label>
+                <label><input type="radio" name="enlistLayout" value="port"> 縦長（1024×1536）</label>
+              </p>
+            </div>
+            <div>
+              <h3 class="subhead">写真</h3>
+              <p class="hint">好きな画像を、入隊証の写真の枠に入れられます。入れなければ、魔王軍の紋章が入ります。</p>
+              <p class="btn-row"><label class="btn primary">画像を選ぶ<input type="file" accept="image/*" data-img-pick="demonPhoto" hidden></label> <button type="button" class="btn" data-img-clear="demonPhoto" hidden>外す</button></p>
+              <p class="meta" id="demonPhotoState"></p>
+            </div>
+          </div>
+          <p class="hint">入れた画像は、このブラウザの中にだけ記録し、どこにも送りません（大きい画像は縮めて記録します）。バックアップに入れるかどうかは、設定の「バックアップ」で選べます。</p>
+        </div>
+      </div>
+    </div>
     <div class="crew-grid">
       <div class="card">
         <h2>称号</h2>
@@ -271,6 +333,12 @@
         <p><input type="text" id="epithetInput" class="epithet-input" maxlength="24" placeholder="例：鉄壁の" aria-label="二つ名" autocomplete="off"></p>
         <p class="epithet-ideas" id="epithetIdeas"></p>
         <p class="meta" id="epithetMsg" role="status"></p>
+        <div id="wantedPhotoBox">
+        <h3 class="subhead">手配書の写真</h3>
+        <p class="hint">手配書の写真の欄に、好きな画像を入れられます。入れなければロゴが入ります。画像はこのブラウザの中にだけ記録します。</p>
+        <p class="btn-row"><label class="btn">画像を選ぶ<input type="file" accept="image/*" data-img-pick="wantedPhoto" hidden></label> <button type="button" class="btn" data-img-clear="wantedPhoto" hidden>外す</button></p>
+        <p class="meta" id="wantedPhotoState"></p>
+        </div>
       </div>
       <div class="wanted" id="wanted" aria-label="手配書（称号のプレビュー）"></div>
     </div>
@@ -377,6 +445,7 @@
       <p class="hint">Penに記録したデータは、このブラウザの中にだけあります。<span class="ext-only">拡張機能を削除すると消えるので、</span><span class="web-only">ブラウザの「Cookieとサイトデータ」を削除すると消え、機種変更でも引き継がれないので、</span>ときどきバックアップファイルをダウンロードしておいてください。パソコン版とWeb版のバックアップは互いに読み込めます。<span id="storageInfo"></span></p>
       <div class="btn-row">
         <button class="btn dl" data-action="json-backup">⬇ バックアップをダウンロード（JSON）</button>
+        <label class="meta backup-img"><input type="checkbox" id="backupImages" checked> 画像（入隊証・手配書に入れた画像）もバックアップに入れる</label>
         <button class="btn web-only" data-action="share-backup">⬆ バックアップを共有（ドライブなどに置く）</button>
         <label class="btn">⬆ バックアップファイルから復元<input type="file" accept="application/json" id="importFile" hidden></label>
       </div>
@@ -434,6 +503,7 @@
 <script src="app/settings.js"></script>
 <script src="app/guide.js"></script>
 <script src="app/bodies.js"></script>
+<script src="app/enlist-draw.js"></script>
 <script src="app/perks.js"></script>
 <script src="app/webapp.js"></script>
 </body>

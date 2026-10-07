@@ -38,6 +38,7 @@ const PenSettings = (() => {
     { key: 'intro', group: '使い方', name: '使い方の説明', now: () => (st().introDone ? '見ました' : ''), action: ['もう一度見る', async () => { PenGuide.openIntro(); }] },
     { key: 'startGuide', group: '使い方', name: '使い始めの案内（記録を始めた日・あと何日で使えるか）', control: 'check', get: () => !st().startGuideOff, set: (v) => { S.settings.startGuideOff = !v; return ['startGuideOff']; } },
     { key: 'backup', group: '記録', name: 'バックアップ・復元・数値のダウンロード', now: () => '', go: '#backupCard' },
+    { key: 'backupImages', group: '記録', name: '入隊証・手配書に入れた画像もバックアップに入れる', control: 'check', get: () => st().backupImages !== false, set: (v) => { S.settings.backupImages = v; const c = document.getElementById('backupImages'); if (c) c.checked = v; return ['backupImages']; } },
   ];
 
   function render() {

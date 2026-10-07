@@ -521,6 +521,7 @@
     await send('SET_KV', { key: 'perk', value: perk });
     if (st.perkForce) await send('SET_KV', { key: 'perkForce', value: false });
     if (!before || before.checkedAt !== perk.checkedAt) log('info', `称号の解放を確認しました（フォロー${perk.following ? '中' : 'なし'}）`);
+    if (!before || before.demonAt !== perk.demonAt) log('info', `魔王軍への入隊を確認しました（魔王ノアのフォロー${perk.demon ? '中' : 'なし'}）`);
   }
 
   /* ---------- 実行制御 ---------- */
