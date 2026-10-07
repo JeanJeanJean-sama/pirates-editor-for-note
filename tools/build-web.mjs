@@ -19,7 +19,9 @@ mkdirSync(join(OUT, 'app'), { recursive: true });
 mkdirSync(join(OUT, 'icons'), { recursive: true });
 
 // 1. 画面の共通ファイル
-for (const f of ['db.js', 'data.js', 'store.js', 'threads.js', 'backup.js', 'dashboard.js', 'periods.js', 'views.js', 'cardtrend.js', 'share.js', 'search.js', 'calendar.js', 'missions.js', 'features.js', 'account.js', 'beta.js', 'colors.js', 'settings.js', 'guide.js', 'bodies.js', 'perks.js', 'theme-boot.js', 'dashboard.css']) copyFileSync(join(SRC, f), join(OUT, 'app', f));
+for (const f of ['db.js', 'data.js', 'store.js', 'threads.js', 'backup.js', 'dashboard.js', 'periods.js', 'views.js', 'cardtrend.js', 'share.js', 'search.js', 'calendar.js', 'missions.js', 'features.js', 'account.js', 'beta.js', 'colors.js', 'settings.js', 'guide.js', 'bodies.js', 'enlist-draw.js', 'perks.js', 'theme-boot.js', 'dashboard.css']) copyFileSync(join(SRC, f), join(OUT, 'app', f));
+mkdirSync(join(OUT, 'app', 'img'), { recursive: true });
+for (const f of readdirSync(join(SRC, 'img'))) copyFileSync(join(SRC, 'img', f), join(OUT, 'app', 'img', f)); // v0.7.2 入隊証の枠
 for (const f of ['web.js', 'webapp.js']) copyFileSync(join(WEB, f), join(OUT, 'app', f));
 // env.js は本体の指紋が決まってから書く（下の 3.）
 
@@ -54,6 +56,7 @@ must('<script src="colors.js"></script>', '<script src="app/colors.js"></script>
 must('<script src="settings.js"></script>', '<script src="app/settings.js"></script>');
 must('<script src="guide.js"></script>', '<script src="app/guide.js"></script>');
 must('<script src="bodies.js"></script>', '<script src="app/bodies.js"></script>');
+must('<script src="enlist-draw.js"></script>', '<script src="app/enlist-draw.js"></script>');
 must('<script src="perks.js"></script>', '<script src="app/perks.js"></script>\n<script src="app/webapp.js"></script>');
 // 過去の記録を埋める（v0.7.1 ストア公開記念の特典・将来の有料機能）は拡張機能版だけ。Web版には入れない
 must('<script src="backfill.js"></script>\n<script src="backfill-ui.js"></script>\n', '');

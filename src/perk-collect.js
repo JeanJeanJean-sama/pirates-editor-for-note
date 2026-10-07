@@ -7,6 +7,7 @@
  *  2. 彼の記事にスキしたか（記事数）            … /api/v2/creators/jeanjeanjean/contents の isLiked
  *  3. 彼の記事にコメントしたか（記事数）        … 各記事のコメント一覧の投稿者
  *  4. 自分の記事で彼の記事を引用したか（記事数）… 自分の記事の本文に彼の記事URLがあるか
+ *  5. 魔王ノア（@noah_woaks）をフォローしているか … /api/v2/creators/noah_woaks の isFollowing（v0.7.2 魔王軍の着せ替え）
  *
  * ・フォローしていない間は 1〜2 だけを1日1回（通信1回）。フォロー中は週1回。
  * ・引用の確認は、自分の記事を1回の記録につき最大15本ずつ、まだ見ていない記事だけ
@@ -14,6 +15,8 @@
  * ============================================================ */
 var PenPerkCollect = (() => {
   const CAPTAIN = 'jeanjeanjean';
+  /** 魔王ノア（v0.7.2）。フォローすると魔王軍の着せ替え・ジョブ・固有スキル・入隊証が使える */
+  const DEMON_LORD = 'noah_woaks';
   const QUOTE_RE = /note\.com\/jeanjeanjean\/n\/n[0-9a-z]+/i;
   const DAY = 864e5;
   const MAX_LIST_PAGES = 30;
@@ -21,7 +24,7 @@ var PenPerkCollect = (() => {
   const MAX_COMMENT_PAGES = 3;
 
   function blank(urlname) {
-    return { v: 1, urlname, checkedAt: 0, following: false, total: 0, likedKeys: [], commentedKeys: [], quotedKeys: [], scannedKeys: [] };
+    return { v: 1, urlname, checkedAt: 0, following: false, total: 0, likedKeys: [], commentedKeys: [], quotedKeys: [], scannedKeys: [], demon: false, demonAt: 0 };
   }
 
   /** 前回の結果が同じアカウントのものなら引き継ぐ */
@@ -31,6 +34,19 @@ var PenPerkCollect = (() => {
   }
 
   const isDue = (p, force) => force || !p.checkedAt || Date.now() - p.checkedAt > (p.following ? 7 * DAY : DAY);
+  /** 魔王軍の確認は別の時計（0.7.1 までの結果には demonAt が無いので、上げた直後にすぐ確認する） */
+  const isDemonDue = (p, force) => force || !p.demonAt || Date.now() - p.demonAt > (p.demon ? 7 * DAY : DAY);
+
+  async function checkDemon(p, o, say) {
+    if (o.me.urlname === DEMON_LORD) { p.demon = true; p.demonLord = true; p.demonAt = Date.now(); return; }
+    if (!isDemonDue(p, o.force)) return;
+    say('魔王軍への入隊を確認中…');
+    try {
+      const c = await o.getJson(`/api/v2/creators/${DEMON_LORD}`);
+      p.demon = !!(c && c.data && c.data.isFollowing);
+      p.demonAt = Date.now();
+    } catch (_) { /* 次回また確認 */ }
+  }
 
   /**
    * @param {object} o
@@ -47,6 +63,7 @@ var PenPerkCollect = (() => {
     const { getJson, me } = o;
     const p = base(o.prev, me);
     const say = (t) => { try { if (o.onProgress) o.onProgress(t); } catch (_) { /* 表示だけ */ } };
+    await checkDemon(p, o, say);
     if (me.urlname === CAPTAIN) return { ...p, captain: true, following: true, checkedAt: Date.now() };
 
     if (isDue(p, o.force)) {
@@ -104,5 +121,5 @@ var PenPerkCollect = (() => {
     return p;
   }
 
-  return { CAPTAIN, QUOTE_RE, check, isDue };
+  return { CAPTAIN, DEMON_LORD, QUOTE_RE, check, isDue, isDemonDue };
 })();

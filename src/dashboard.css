@@ -369,6 +369,36 @@ html[data-theme="king"] {
 html[data-theme="king"] .top { background: var(--head-bg); border-bottom: 3px solid #8b0f16; box-shadow: 0 3px 0 #c9a227; }
 html[data-theme="king"] .card, html[data-theme="king"] .kpi { border-color: #5a4630; box-shadow: inset 0 0 0 1px rgba(201,162,39,.25); }
 html[data-theme="king"] .btn.primary, html[data-theme="king"] .totals-badge { color: #1a1512; }
+/* v0.7.2 魔王軍（@noah_woaks をフォロー）：漆黒・深紅・金の飾り枠 */
+html[data-theme="demon"] {
+  color-scheme: dark;
+  --c-imp: #3987e5; --c-pv: #d95926; --c-like: #199e70; --c-comment: #9b7ae0; --c-rate: #d9c79c; --c-prev: #9a8466;
+  --bg: #130c0e; --surface: #1e1316; --line: #4d2f30; --grid: #2e1d20; --track: #2e1d20;
+  --text: #efe3c8; --text-2: #d6c39b; --muted: #9a8466;
+  --accent: #c9a24a; --series-1: #c9a24a; --good: #7fcf84; --bad: #ff6b5e; --danger: #ff6b5e; --pill: #b3121c;
+  --head-bg: linear-gradient(180deg, #0a0607, #2a070d); --head-text: #f3dc95; --head-sub: #c7a96a; --head-accent: #c9a24a; --head-chip-text: #130c0e;
+}
+html[data-theme="demon"] body { background: radial-gradient(ellipse at top left, rgba(120,12,22,.28), transparent 55%), radial-gradient(ellipse at bottom right, rgba(120,12,22,.18), transparent 60%), var(--bg); }
+html[data-theme="demon"] .top { background: var(--head-bg); border-bottom: 2px solid #8b0f16; box-shadow: 0 2px 0 #c9a24a, 0 6px 16px rgba(0,0,0,.5); }
+html[data-theme="demon"] .card, html[data-theme="demon"] .kpi { border-color: #6b4a2c; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(201,162,74,.35), 0 2px 10px rgba(0,0,0,.4); }
+html[data-theme="demon"] .btn.primary, html[data-theme="demon"] .totals-badge { color: #130c0e; }
+html[data-theme="demon"] .top .title-chip { background: linear-gradient(180deg, #f3dc95, #b98f3c); }
+html[data-theme="demon"] #tab-map { --q-tr: #4cc27d; --q-br: #ff7b72; --q-tl: #5f9ff0; --q-bl: #a3a29b; }
+.skill-chip { display: inline-block; margin-left: 6px; padding: 0 8px; border: 1px solid var(--head-accent, var(--accent)); border-radius: 4px; color: var(--head-text, var(--text)); font-size: 11px; font-weight: 700; line-height: 17px; vertical-align: 1px; }
+.demon-card .perk-status h2 { font-size: 16px; }
+.demon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 24px; }
+.card-pick { display: flex; flex-direction: column; gap: 6px; }
+#jobMsg.bad, #skillMsg.bad, #enlistMsg.bad { color: var(--bad); }
+.crew-grid:has(.wanted.enlist), .crew-grid:has(#wanted[hidden]) { grid-template-columns: 1fr; }
+.enlist-top .wanted.enlist { margin-top: 4px; }
+.wanted.enlist { padding: 0; background: #0c0809; border: 0; border-radius: 6px; box-shadow: 0 4px 18px rgba(0,0,0,.35); max-width: 760px; width: 100%; margin: 0 auto; overflow: hidden; }
+.wanted.enlist .enlist-img { display: block; width: 100%; height: auto; }
+.wanted.enlist[data-layout="port"] { max-width: 460px; }
+.w-photo.has-img { padding: 0; overflow: hidden; }
+.w-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.w-photo svg { width: 80%; height: 80%; }
+.backup-img { display: inline-flex; gap: 6px; align-items: center; }
+@media (max-width: 640px) { .wanted.enlist { max-width: none; } }
 @media (max-width: 640px) {
   .themes { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .tp { height: 56px; }
@@ -597,7 +627,7 @@ body.pop-open { overflow: hidden; }
 .cal-legend { display: flex; gap: 6px 14px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--text-2); margin: 4px 0 8px; }
 :root { --cal-posted: #1f77d0; --cal-plan: #1a9a55; --cal-contest: #e0487a; --cal-other: #d98a0b; }
 @media (prefers-color-scheme: dark) { :root { --cal-posted: #4d9be6; --cal-plan: #3cbf78; --cal-contest: #f06b95; --cal-other: #f0a830; } }
-html[data-theme="king"] { --cal-posted: #4d9be6; --cal-plan: #3cbf78; --cal-contest: #f06b95; --cal-other: #f0a830; }
+html[data-theme="king"], html[data-theme="demon"] { --cal-posted: #4d9be6; --cal-plan: #3cbf78; --cal-contest: #f06b95; --cal-other: #f0a830; }
 .cal-mk.posted, .cal-item.posted, .cal-bandmk.posted, .tag.posted { --c: var(--cal-posted); }
 .cal-mk.post, .cal-item.post, .cal-band.post, .cal-bandmk.post, .tag.post { --c: var(--cal-plan); }
 .cal-mk.contest, .cal-item.contest, .cal-band.contest, .cal-bandmk.contest, .tag.contest { --c: var(--cal-contest); }
@@ -704,3 +734,18 @@ html[data-theme="king"] { --cal-posted: #4d9be6; --cal-plan: #3cbf78; --cal-cont
 #backfillCard .bf-status .warn { font-size: 13px; }
 #backfillCard .bf-sum { margin: 6px 0 8px; padding-left: 1.2em; font-size: 13px; }
 #backfillCard .bf-sum li { margin: 2px 0; overflow-wrap: anywhere; }
+
+/* v0.7.2 魔王軍入隊証：小さく表示し、押すと大きく */
+.enlist-thumb { display: block; width: 100%; max-width: 380px; margin: 0 auto; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: 6px; }
+.enlist-thumb:has([data-layout="port"]) { max-width: 230px; }
+.enlist-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.enlist-thumb .wanted.enlist { display: block; max-width: none; }
+.enlist-tip { text-align: center; margin-top: 6px; }
+.enlist-zoom { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; cursor: zoom-out; }
+.enlist-zoom[hidden] { display: none !important; }
+.enlist-zoom img { max-width: min(96vw, 1200px); max-height: calc(100vh - 90px); width: auto; height: auto; border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,.6); }
+.enlist-modes { gap: 10px; }
+.enlist-modes label { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.enlist-modes label:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.enlist-modes label .meta { grid-column: 2; }
+.enlist-own { margin: 4px 0 8px; }

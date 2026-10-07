@@ -75,6 +75,7 @@ Chromeウェブストアでの公開を記念して、**拡張機能版の全員
 | 海賊王 | @jeanjeanjean 本人だけが名乗れる称号と、専用の着せ替え「海賊王の旗艦」 |
 | 元帥・大元帥 | noteの加藤貞顕さん（@sadaaki）と深津貴之さん（@fladdict）だけが名乗れる称号 |
 | 二つ名 | 名前の前に付ける言葉（12文字まで）。フォローしなくても使える |
+| 魔王軍 | noteの魔王ノア（[@noah_woaks](https://note.com/noah_woaks)）をフォローすると入隊。着せ替え「魔王軍」（画面の上の名前が Devil's Empire Magic Order for note（Demon）に）、ジョブ名・固有スキル、「魔王軍入隊証」（魔王軍の入隊証の枠に、名前・ジョブ名・固有スキル・入隊日と好きな写真を入れる。横長・縦長。自分で作った入隊証の画像を飾ることもできる）。@jeanjeanjean のフォローは要らない。「魔王」は魔王ノア本人だけ |
 
 確認のしかた：フォローしていない間は1日1回（通信1回）、フォロー中は週1回、フォロー・スキ・コメントを確認します。引用は、自分の記事の本文に彼の記事のURL（埋め込み）があるかで判定し、記録のたびに最大15記事ずつ確認します。結果はブラウザ内にだけ記録します。
 
@@ -160,7 +161,7 @@ Pen は、note の書き手が **自分自身のデータ** をふり返るた�
 | コメントのやり取りの返信 | `GET /api/v3/notes/{key}/note_comments?parent_key={親コメント}&order=oldest`（返信への返信も含めて古い順。自分の記事と、自分がコメントした公開の記事だけ） |
 | 通知 | `GET /api/v3/notices`（ふだんは1ページ目だけ。12時間ごとに最大25ページ、約300件。種類 `note_comment`・`note_comment_reply`・`note_comment_like` を使う。既読にはしない） |
 | 記事の本文 | `GET /api/v3/notes/{key}`（noteのページ内・ログイン状態で取得） |
-| フォロー特典の確認 | `GET /api/v2/creators/jeanjeanjean`（`isFollowing`）、`GET /api/v2/creators/jeanjeanjean/contents`（`isLiked`）、彼の記事の `note_comments` |
+| フォロー特典の確認 | `GET /api/v2/creators/jeanjeanjean`（`isFollowing`）、`GET /api/v2/creators/noah_woaks`（`isFollowing`。魔王軍）、`GET /api/v2/creators/jeanjeanjean/contents`（`isLiked`）、彼の記事の `note_comments` |
 
 ## ファイル構成
 
@@ -201,7 +202,7 @@ web/              Web版だけのファイル（ブックマークレット本�
 web/collectors/   公開したブックマークレット本体（collector-指紋.js）。登録済みの人のために、古いものも消さずに残す
 tools/build-web.mjs  Web版（docs/）を作る。本体の指紋もここで計算する
 tools/make-fake-data.mjs  にせの大きい記録を作る（速さを測るため）
-tests/            自動のテスト（node tests/run-070.mjs・node tests/run-071.mjs）
+tests/            自動のテスト（node tests/run-070.mjs・node tests/run-071.mjs・node tests/run-072.mjs）
 docs/             GitHub Pages で公開するWeb版（build-web.mjs で作る）
 ```
 

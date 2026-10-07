@@ -48,6 +48,7 @@ const PenBackup = (() => {
     { key: 'missions', how: 'byId', empty: [] },
     { key: 'recordAccount', how: 'account', empty: null },
     { key: 'betaPerk', how: 'beta', empty: null },
+    { key: 'images', how: 'keys', empty: {} }, // v0.7.2 入隊証・手配書の画像（設定の backupImages が false なら入れない）
   ];
 
   /** kv の合わせ方（テストで直接呼べる） */
@@ -105,7 +106,11 @@ const PenBackup = (() => {
       parts.push(']');
     }
     const kv = {};
-    for (const k of KV) kv[k.key] = k.key === 'recordAccount' ? await PenStore.recordAccount() : await NDB.kvGet(k.key, k.empty);
+    const withImages = (await NDB.kvGet('settings', {})).backupImages !== false;
+    for (const k of KV) {
+      if (k.key === 'images' && !withImages) continue;
+      kv[k.key] = k.key === 'recordAccount' ? await PenStore.recordAccount() : await NDB.kvGet(k.key, k.empty);
+    }
     parts.push('},"kv":', JSON.stringify(kv));
     parts.push(',"local":', JSON.stringify(readLocal())); // 0.6.3 の引っ越し用ファイルと同じ形（復元で localStorage に戻す）
     parts.push('}');
