@@ -575,6 +575,12 @@ body.pop-open { overflow: hidden; }
 .share-list-preview h3:first-child { margin-top: 0; }
 .share-list-preview p { margin: 0 0 6px; }
 .share-pop .custom-range input[type=date] { max-width: 9.5em; }
+/* v0.8.0：共有の画面の期間 */
+.share-period { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 6px 0 4px; font-size: 13px; }
+.share-pop .pk-seg { display: none; }
+.share-pop .pk-select { display: inline-block; width: auto; }
+.share-nav { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.share-range { font-variant-numeric: tabular-nums; }
 
 /* v0.6.0 ⑥ 記事を選んでダウンロード */
 #bodyExport .custom-range input[type="date"] { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }

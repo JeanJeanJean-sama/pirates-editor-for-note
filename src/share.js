@@ -59,7 +59,8 @@ const PenShare = (() => {
    */
   function listDoc(items, opts = {}) {
     const start = opts.start || '0000-01-01', end = opts.end || '9999-12-31';
-    const rows = (items || []).filter((i) => (!i.status || i.status === 'published'))
+    // 下書き・削除・非公開をはっきり表す状態だけを外す（note の状態の書き方は大文字のこともあるため。periods.js の isPublic と同じ）
+    const rows = (items || []).filter((i) => !/draft|delet|unpublish|private/i.test(String(i.status || '')))
       .map((i) => ({ ...i, day: jstDayOf(i.publishedAt), imp: Number(i.imp) || 0, pv: Number(i.pv) || 0, like: Number(i.like) || 0, comment: Number(i.comment) || 0 }))
       .filter((i) => i.day && i.day >= start && i.day <= end)
       .sort((a, b) => (a.publishedAt || '').localeCompare(b.publishedAt || '') || String(a.key || '').localeCompare(String(b.key || '')));
@@ -381,8 +382,18 @@ const PenShare = (() => {
     if (!D) { box.innerHTML = '<div class="pop-head"><h3 id="shareTitle">共有用に出す</h3><button class="btn small" data-share="close" aria-label="閉じる">×</button></div><p class="meta">まだ記録がありません。</p>'; return; }
     const nothing = c.tab === 'image' ? !c.period && !c.top && !c.daily : !c.period && !c.top;
     const scheme = schemeOf(c), weak = c.tab === 'image' ? weakColors(scheme) : [];
+    const nav = PenPeriods.navState ? PenPeriods.navState() : { back: 0, hasPrev: false, hasNext: false };
     box.innerHTML = `<div class="pop-head"><h3 id="shareTitle">共有用に出す <span class="meta">${esc(D.rangeText)}</span></h3><button class="btn small" data-share="close" aria-label="閉じる">×</button></div>
-      <p class="hint">期間は「期間の動き」で選んでいる期間です。noteの振り返り記事に貼るための文字や画像を、パソコンのクリップボードにコピーできます。</p>
+      <div class="share-period">
+        <span class="meta">期間</span><span id="sharePicker"></span>
+        <span class="share-nav">
+          <button type="button" class="btn small" data-snav="back" ${nav.hasPrev ? '' : 'disabled'} aria-label="前の期間">← 前</button>
+          <b class="share-range">${esc(D.rangeText)}</b>
+          <button type="button" class="btn small" data-snav="fwd" ${nav.hasNext ? '' : 'disabled'} aria-label="次の期間">次 →</button>
+          <button type="button" class="btn small" data-snav="latest" ${nav.back ? '' : 'disabled'}>最新</button>
+        </span>
+      </div>
+      <p class="hint">期間は「期間の動き」と同じです（ここで変えると「期間の動き」も変わります）。noteの振り返り記事に貼るための文字や画像を、パソコンのクリップボードにコピーできます。</p>
       <div class="share-opts">
         <label class="check"><input type="checkbox" data-sopt="period" ${c.period ? 'checked' : ''}> 期間の比較（今の期間と${esc(D.cmpLabel)}）</label>
         <label class="check"><input type="checkbox" data-sopt="top" ${c.top ? 'checked' : ''}> 伸びた記事</label>
@@ -405,6 +416,8 @@ const PenShare = (() => {
         <div class="btn-row"><button class="btn primary" data-share="copy-image" ${nothing ? 'disabled' : ''}>📋 画像をコピー</button><button class="btn dl" data-share="dl-image" ${nothing ? 'disabled' : ''}>⬇ 画像をダウンロード（PNG）</button></div>
         <p class="hint">画像はグラフと文字だけで作ります（見出し画像やアイコンは入れません）。${c.daily ? `日ごとのグラフは「期間の比較」の下に入ります。${D.days.overlay ? '前の期間を点線で重ねています（「期間の動き」の線グラフと同じ）。' : '前の期間は重ねていません（「期間の動き」を線グラフ・増えた数にすると重なります）。'}` : ''}グラフの色は、設定タブで変えた色を使います。</p>`}
       <p class="meta" id="shareMsg" role="status"></p>`;
+    const pk = $('#sharePicker');
+    if (pk && PenPeriods.picker) PenPeriods.picker(pk, PenPeriods.sel(), (v) => changePeriod(() => PenPeriods.setSel(v)), 'share');
     if (c.tab === 'image') {
       const pv = $('#sharePreview');
       if (nothing) { pv.innerHTML = '<p class="meta">出す内容を選んでください。</p>'; X.canvas = null; }
@@ -412,6 +425,19 @@ const PenShare = (() => {
     }
   }
 
+  /** v0.8.0：共有の画面で期間を変える（「期間の動き」と同じ期間。古い期間の記録は読み込んでから描く） */
+  let busy = false;
+  async function changePeriod(fn) {
+    if (busy) return;
+    busy = true;
+    try {
+      await fn();
+      const box = $('#sharePreview'); if (box) box.innerHTML = '<p class="meta loading" role="status">古い期間の記録を読み込んでいます…</p>';
+      await PenPeriods.ensure(1);
+    } catch (e) { msg(`記録を読み込めませんでした：${e.message || e}`, true); }
+    finally { busy = false; }
+    render();
+  }
   const msg = (t, bad) => { const el = $('#shareMsg'); if (el) { el.textContent = t; el.classList.toggle('warn', !!bad); } };
   const pngBlob = () => new Promise((res, rej) => X.canvas.toBlob((b) => (b ? res(b) : rej(new Error('画像を作れませんでした'))), 'image/png'));
   const fileName = () => { const D = PenPeriods.shareData(conf().n, conf().metric); return `pen-share-${D ? D.end : jstDate()}.png`; };
@@ -459,9 +485,10 @@ const PenShare = (() => {
   }
 
   document.addEventListener('click', (e) => {
-    const b = e.target.closest && e.target.closest('[data-share],[data-stab]');
+    const b = e.target.closest && e.target.closest('[data-share],[data-stab],[data-snav]');
     if (!b || b.disabled) return;
     if (b.dataset.stab) { setConf({ tab: b.dataset.stab }); return; }
+    if (b.dataset.snav) { const nv = PenPeriods.navState(); const a = b.dataset.snav; changePeriod(() => PenPeriods.go(a === 'back' ? nv.back + 1 : a === 'fwd' ? nv.back - 1 : 0)); return; }
     const a = b.dataset.share;
     if (a === 'close') close();
     else if (a === 'copy-text') copyText();

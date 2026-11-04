@@ -25,7 +25,7 @@ const ARTS = [
   { key: 'a4', title: '月末の記事', publishedAt: '2026-10-28T03:00:00.000Z' },
   { key: 'a5', title: '消した記事', publishedAt: '2026-10-10T03:00:00.000Z' },
   { key: 'a6', title: '下書きに戻した記事', publishedAt: '2026-10-15T03:00:00.000Z', status: 'draft' },
-].map((a) => ({ status: 'published', url: `https://note.com/fake/n/${a.key}`, account: 'fake', ...a }));
+].map((a) => ({ status: a.key === 'a2' ? 'published' : 'PUBLISHED', url: `https://note.com/fake/n/${a.key}`, account: 'fake', ...a }));
 const addDays = (d, n) => { const t = new Date(`${d}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
 const diff = (a, b) => Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 864e5);
 function numsOf(key, date) {
@@ -83,6 +83,7 @@ function unitTests() {
   a = C.pubAverages(snaps, '2026-10-01', '2026-10-31', 'day7', '2026-11-03');
   ok(a.counted === 2 && a.notYet === 1 && a.skipped === 1, `公開から7日目：7日目前の記事は数えない（数えた ${a.counted}・数えず ${a.skipped}）`);
   ok(a.sum.imp === 1000 && a.sum.pv === 106 && a.sum.like === 19 && a.sum.comment === 1, `公開から7日目：合計 ${JSON.stringify(a.sum)}`);
+  ok(C.isPublic('PUBLISHED') && C.isPublic('published') && C.isPublic('') && C.isPublic(undefined) && !C.isPublic('DRAFT') && !C.isPublic('deleted') && !C.isPublic('private'), '公開の状態：大文字・小文字・空でも公開、下書き・削除・非公開は外す');
   // 分母0
   const zero = [{ date: '2026-10-02', items: [{ key: 'z', status: 'published', publishedAt: '2026-10-01T03:00:00Z', imp: 0, pv: 0, like: 0, comment: 0 }] }];
   a = C.pubAverages(zero, '2026-10-01', '2026-10-31');
@@ -247,6 +248,21 @@ async function uiTests() {
   await page.evaluate(async () => { S.settings.colors = {}; await saveSettings('colors'); PenColors.apply(); });
   await page.selectOption('[data-sopt="color"]', 'auto'); await page.waitForTimeout(200);
 
+  // 共有の画面で期間を変える
+  await page.click('[data-stab="text"]'); await page.waitForTimeout(200);
+  ok((await page.textContent('#sharePop .share-range')).includes('2026年10月') && await page.$('#sharePicker select.pk-select'), '共有の画面に期間の選択がある（今は月ごと・10月）');
+  await page.click('[data-snav="back"]'); await page.waitForTimeout(600);
+  ok((await page.textContent('#sharePop .share-range')).includes('2026年9月') && (await page.inputValue('#shareText')).includes('【2026年9月のnoteの数字】'), '共有の画面で「← 前」：9月の数字になる');
+  ok((await page.textContent('#periodNav')).includes('2026年9月'), '「期間の動き」も同じ期間になる');
+  await page.click('[data-snav="latest"]'); await page.waitForTimeout(600);
+  ok((await page.textContent('#sharePop .share-range')).includes('2026年10月'), '「最新」で戻る');
+  await page.selectOption('#sharePicker select.pk-select', 'custom'); await page.waitForTimeout(600);
+  await page.fill('#shareStart', '2026-10-05'); await page.fill('#shareEnd', '2026-10-11'); await page.dispatchEvent('#shareEnd', 'change'); await page.waitForTimeout(700);
+  ok((await page.textContent('#sharePop .share-range')).includes('10/5〜10/11') && (await page.inputValue('#shareText')).includes('10/5〜10/11'), `共有の画面でカスタムの期間を選べる（${(await page.textContent('#sharePop .share-range')).trim()}）`);
+  ok(JSON.stringify((await settingsOf(page)).growthPeriod) === JSON.stringify({ kind: 'custom', start: '2026-10-05', end: '2026-10-11' }), '選んだ期間は設定に覚える（「期間の動き」と同じ）');
+  await page.selectOption('#sharePicker select.pk-select', 'month'); await page.waitForTimeout(600);
+  ok((await page.textContent('#sharePop .share-range')).includes('2026年10月'), '月ごとに戻せる');
+
   // 2. 共有の文字にもインプレッション
   await page.click('[data-stab="text"]'); await page.waitForTimeout(200);
   const txt = await page.inputValue('#shareText');
@@ -311,6 +327,10 @@ async function uiTests() {
   const sw2 = await c.page.evaluate(() => [document.querySelector('.share-pop').scrollWidth, document.querySelector('.share-pop').clientWidth, document.documentElement.scrollWidth, innerWidth]);
   ok(sw2[0] <= sw2[1] + 1 && sw2[2] <= sw2[3], `共有（記事の一覧）：横にはみ出さない（${sw2.join('/')}）`);
   await c.page.screenshot({ path: join(OUT, 'share-list-phone.png') });
+  await c.page.click('[data-stab="image"]'); await c.page.waitForTimeout(400);
+  const sw3 = await c.page.evaluate(() => [document.querySelector('.share-pop').scrollWidth, document.querySelector('.share-pop').clientWidth]);
+  ok(sw3[0] <= sw3[1] + 1, `共有（画像・期間の選択）：横にはみ出さない（${sw3.join('/')}）`);
+  await c.page.screenshot({ path: join(OUT, 'share-image-phone.png') });
   ok(c.errs.length === 0, `スマホ幅：エラーなし ${c.errs.join(' / ')}`);
   await c.ctx.close();
 }

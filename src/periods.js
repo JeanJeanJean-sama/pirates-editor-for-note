@@ -214,6 +214,11 @@ const PenPeriods = (() => {
    * 率は合計で割る：開封率＝合計のPV÷合計のインプレッション、スキ率＝合計のスキ÷合計のPV（分母0は null）
    * 戻り値 { published, counted, skipped, notYet, noRecord, sum:{imp,pv,like,comment}, avg:{...}|null, ctr, likeRate }
    */
+  /**
+   * 公開している記事か。note の状態の書き方（大文字・小文字など）が決まっていないので、
+   * 下書き・削除・非公開をはっきり表すものだけを外す（0.8.0 の初めは 'published' だけを通していて、本物の note の記事がすべて外れていた）
+   */
+  const isPublic = (st) => !/draft|delet|unpublish|private/i.test(String(st || ''));
   function day7Of(snaps, key, pub, today) {
     const target = addDays(pub, 6);
     const last = snaps[snaps.length - 1];
@@ -231,7 +236,7 @@ const PenPeriods = (() => {
   function pubAverages(snaps, start, end, mode = 'total', today = '') {
     const res = { published: 0, counted: 0, skipped: 0, notYet: 0, noRecord: 0, sum: { imp: 0, pv: 0, like: 0, comment: 0 }, avg: null, ctr: null, likeRate: null };
     // 下書き・公開をやめた記事（状態が published 以外）は数えない（記事の一覧のコピーと同じ）
-    const list = publishedIn(snaps, start, end).filter((i) => !i.status || i.status === 'published');
+    const list = publishedIn(snaps, start, end).filter((i) => isPublic(i.status));
     res.published = list.length;
     for (const i of list) {
       let v = i;
@@ -250,7 +255,7 @@ const PenPeriods = (() => {
     return res;
   }
 
-  const calc = { addDays, diffDays, jstDay, lastOnOrBefore, growth, resolve, before, sameDays, buckets, publishedIn, daily, rateTotals, day7Of, pubAverages };
+  const calc = { addDays, diffDays, jstDay, lastOnOrBefore, growth, resolve, before, sameDays, buckets, publishedIn, daily, rateTotals, day7Of, pubAverages, isPublic };
   if (typeof document === 'undefined') return { calc };
 
   /* ==================== 画面 ==================== */
@@ -302,6 +307,14 @@ const PenPeriods = (() => {
     render();
   }
   function go(back) { P.back = back; P.artShown = 20; render(); }
+  /** v0.8.0：共有の画面から期間を変えたとき、要る期間の記録を読み込んでおく（今の期間と前の期間） */
+  async function ensure(count = 1) {
+    if (typeof PenData === 'undefined') return;
+    const need = needFrom(count);
+    if (need && !PenData.hasFrom(need)) await PenData.ensureFrom(need);
+  }
+  /** 共有の画面の期間の行き来：今の期間・前・次があるか */
+  const navState = () => { const sv = sel(); return { back: P.back, hasPrev: !!before(S.snapshots, sv, P.back), hasNext: P.back > 0 && !!resolve(S.snapshots, sv, P.back - 1), kind: (resolve(S.snapshots, sv, P.back) || {}).kind || sv.kind }; };
 
   function note(b) {
     const parts = [];
@@ -847,6 +860,6 @@ const PenPeriods = (() => {
   });
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (latest() && !$('#tab-overview').hidden) renderSummary(); }, 150); });
 
-  return { calc, picker, render, resolve, growth, buckets, sel, back: () => P.back, shareData, listMetric: () => P.listMetric, rangeText };
+  return { calc, picker, render, resolve, growth, buckets, sel, back: () => P.back, shareData, listMetric: () => P.listMetric, rangeText, setSel, go, ensure, navState };
 })();
 if (typeof module !== 'undefined') module.exports = PenPeriods;

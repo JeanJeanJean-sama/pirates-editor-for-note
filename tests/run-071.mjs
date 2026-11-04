@@ -14,6 +14,20 @@ const want = (n) => !ONLY.length || ONLY.includes(n);
 const TMP = join(tmpdir(), 'pen-test-071'); mkdirSync(TMP, { recursive: true });
 const TODAY = jstToday();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/**
+ * 0.8.0 で直した：10/1 からの誤った記録の日。10/1〜10/10 と、to までの直近10日（重ならない分）。
+ * テストを流す日が 10/1 から離れても、①一度に直す上限（30日）を超えない ②10/1〜10/10 で不具合（マイナス）を再現できる、ようにするため
+ */
+const FIX_END = '2026-10-10';
+/** 期間の動きで見る期間の終わり（10/1〜この日）。10月のうちは今日まで、11月からは 10/10 まで */
+const FIX_END_OF_TEST = () => (TODAY <= '2026-10-31' ? TODAY : FIX_END);
+function wrongDaysTo(to, inclusive = true) {
+  const last = inclusive ? to : addDays(to, -1), out = [];
+  for (let d = '2026-10-01'; d <= last && d <= FIX_END; d = addDays(d, 1)) out.push(d);
+  const from = addDays(last, -9);
+  for (let d = from > FIX_END ? from : addDays(FIX_END, 1); d <= last; d = addDays(d, 1)) out.push(d);
+  return out;
+}
 
 /** 拡張機能を開き、にせの note を入れ、画面（dash）を開く */
 async function setup(model, fakeOpts = {}) {
@@ -44,8 +58,8 @@ async function openNote(ctx, dash, until, ms = 60000) {
 const getSnap = (dash, d) => dash.evaluate(async (d) => { const s = await NDB.get('snapshots', d); if (!s) return null; const arts = new Map((await NDB.getAll('articles')).map((a) => [a.key, a])); return { ...s, items: PenData.calc.hydrate(s, (k) => arts.get(k)) }; }, d);
 const logs = (dash) => dash.evaluate(() => NDB.kvGet('logs', []).then((l) => l.map((x) => x.message)));
 /** 月ごとの期間の動きの PV（画面の数字。マイナスは −） */
-async function monthPv(dash) {
-  await dash.evaluate(async () => { const st = await NDB.kvGet('settings', {}); await NDB.kvSet('settings', { ...st, growthPeriod: { kind: 'month' } }); });
+async function monthPv(dash, end = FIX_END_OF_TEST()) {
+  await dash.evaluate(async (end) => { const st = await NDB.kvGet('settings', {}); await NDB.kvSet('settings', { ...st, growthPeriod: { kind: 'custom', start: '2026-10-01', end } }); }, end);
   await dash.reload(); await dash.waitForSelector('#tabsNav'); await dash.click('.tabs button[data-tab="overview"]'); await dash.waitForSelector("#periodBody .period-kpis", { timeout: 8000 }).catch(async (e) => { await dash.screenshot({ path: join(TMP, "monthpv.png"), fullPage: true }); console.log("     （期間の動きが出ない）", await dash.evaluate(async () => [await NDB.count("snapshots"), JSON.stringify(await NDB.kvGet("settings", {})), (await NDB.getAllKeys("snapshots")).join()]), (await dash.textContent("#tab-overview")).slice(0, 300)); throw e; }); await sleep(600);
   const t = await dash.textContent('#periodBody .period-kpis .kpi:nth-child(2) .value');
   return Number(t.replace(/[−ー]/g, '-').replace(/[^\d-]/g, ''));
@@ -70,7 +84,7 @@ async function fixLive() {
   ok(listQ.length && listQ.every((g) => g.vars.unit === 'CUSTOM' && g.vars.date === '2014-04-01T00:00:00.000Z' && /T00:00:00\.000Z$/.test(endOf(g))), `問い合わせは CUSTOM（2014/4/1〜その日）だけ（${[...new Set(listQ.map((g) => g.vars.unit))].join(',')}）`);
   const todayQ = listQ.filter((g) => endOf(g).startsWith(TODAY));
   ok(todayQ.length === Math.ceil(model.arts.length / 100), `問い合わせの数が今までと同じ（記録1回で 記事数÷100＝${Math.ceil(model.arts.length / 100)}回。${todayQ.length}回）`);
-  const pv = await monthPv(dash);
+  const pv = await monthPv(dash, TODAY);
   const sep30 = rightSnap(model, '2026-09-30');
   ok(pv > 0 && pv === want.totals.pv - sep30.totals.pv, `10月の期間の動きの PV がプラスで、CUSTOM の差と一致（${pv} ＝ ${want.totals.pv - sep30.totals.pv}）`);
   // 記事の表：8/31 以降に公開した記事の累計が CUSTOM の値
@@ -92,7 +106,7 @@ async function fixRestore() {
   const { ctx, fake, dash, errs } = await setup(model);
   const snaps = [];
   for (let d = '2026-09-27'; d <= '2026-09-30'; d = addDays(d, 1)) snaps.push(rightSnap(model, d, { final: true, finalizedAt: `${d}T20:00:00Z`, finalSource: 'note-day-end', followerCount: 90 }));
-  const wrongDays = []; for (let d = '2026-10-01'; d <= TODAY; d = addDays(d, 1)) wrongDays.push(d);
+  const wrongDays = wrongDaysTo(TODAY, true);
   for (const d of wrongDays) snaps.push(wrongSnap(model, d, d < TODAY ? { final: true, finalizedAt: `${addDays(d, 1)}T06:42:00Z`, finalSource: 'note-day-end', followerCount: 123, capturedAt: `${d}T03:00:00.000Z` } : { followerCount: 124, capturedAt: `${d}T01:00:00.000Z` }));
   await seed(dash, snaps, articlesOf(model), baseKv('fake'));
   // バックアップ → 全部消す → 復元（画面の復元と同じ）
@@ -126,7 +140,7 @@ async function fixRestore() {
   const q1 = fake.log.gql.slice(n0).filter((g) => g.vars.unit);
   ok(q1.length === wrongDays.length * Math.ceil(model.arts.length / 100), `直すための問い合わせは 日数×記事数÷100（${q1.length}回）`);
   const pvAfter = await monthPv(dash);
-  ok(pvAfter > 0 && pvAfter === rightSnap(model, TODAY).totals.pv - rightSnap(model, '2026-09-30').totals.pv, `直した後：10月の期間の動きの PV がプラスで CUSTOM の差と一致（${pvAfter}）`);
+  ok(pvAfter > 0 && pvAfter === rightSnap(model, FIX_END_OF_TEST()).totals.pv - rightSnap(model, '2026-09-30').totals.pv, `直した後：10月の期間の動きの PV がプラスで CUSTOM の差と一致（${pvAfter}）`);
   // 2回目は直さない（問い合わせが増えない）
   const n1 = fake.log.gql.length;
   await dash.evaluate(async () => { await NDB.kvSet('lock', null); });
@@ -173,7 +187,8 @@ async function fixWeb() {
   const fake = await installFakeNote(ctx, model);
   const app = await ctx.newPage();
   await app.goto('http://localhost:8766/index.html'); await app.waitForSelector('#tabsNav');
-  const wrongDays = []; for (let d = '2026-10-01'; d < TODAY; d = addDays(d, 1)) wrongDays.push(d);
+  // Web版は、ブックマークレット1回で新しい方から10日分を直す。直近10日（10/1 より後）だけを入れる（0.8.0：テストを流す日に左右されないように）
+  const wrongDays = []; for (let d = addDays(TODAY, -10); d < TODAY; d = addDays(d, 1)) if (d >= '2026-10-01') wrongDays.push(d);
   await seed(app, [rightSnap(model, '2026-09-30', { final: true, finalSource: 'note-day-end' }), ...wrongDays.map((d) => wrongSnap(model, d, { final: true, finalSource: 'note-day-end', followerCount: 77 }))], articlesOf(model), baseKv('fake'));
   // ブックマークレットの本体を note.com のページで動かす（読み込むコードと同じ：本体のファイルを実行）
   const file = readFileSync(join(DOCS, 'bookmarklet.txt'), 'utf8').match(/collector-[0-9a-f]+\.js/)[0];
@@ -359,7 +374,8 @@ async function bfMove() {
   const before = await allSnaps(dash);
   const laterRows = before.reduce((a, s) => a + s.items.filter((i) => i.publishedAt && new Date(Date.parse(i.publishedAt) + 9 * 3600e3).toISOString().slice(0, 10) > s.date).length, 0);
   ok(laterRows > 0, `復元した誤った記録には、その日より後に公開した記事の行がある（${laterRows}か所。前の道具の誤り）`);
-  if (TODAY > '2026-10-01') ok(strictDecreases(before).length > 0, `復元した誤った記録には、減る所（マイナスの日）がある（${strictDecreases(before).length}か所。10/1 からの ALL の誤り）`);
+  // 10/1 の境目が「30日より前は範囲のいちばん古い日の値」にかからない間だけ、マイナスの日が再現できる（11月からは確かめない）
+  if (TODAY > '2026-10-01' && addDays(TODAY, -30) < '2026-10-01') ok(strictDecreases(before).length > 0, `復元した誤った記録には、減る所（マイナスの日）がある（${strictDecreases(before).length}か所。10/1 からの ALL の誤り）`);
   await dash.evaluate(async () => { const st = await NDB.kvGet('settings', {}); await NDB.kvSet('settings', { ...st, perkCheck: false, checkComments: false, recordMyComments: false, saveBodies: false }); });
   await clickBf(dash, 'start');
   await openNote(ctx, dash, async () => { const s = await NDB.kvGet('backfill', null); return s && ['ready', 'blocked', 'paused'].includes(s.status); }, 500000);
