@@ -42,6 +42,36 @@ const PenShare = (() => {
     return { start: s, end: e, month };
   }
 
+  const addD = (d, n) => { const t = new Date(`${d}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  /**
+   * 記事の一覧の期間（v0.8.0：7日・28日・月ごと・カスタム）。
+   * kind：'7' | '28' | 'month' | 'custom'、back：いくつ前か（0＝いちばん新しい記録の日を含む期間）
+   * lastDate：いちばん新しい記録の日、firstDate：いちばん古い記録の日（それより前の期間は出さない。カスタムは別）
+   * 戻り値 { start, end, month, kind, back }。その期間が無ければ null
+   */
+  function listSpan(kind, back, lastDate, firstDate, from, to) {
+    if (!lastDate) return null;
+    back = Math.max(0, Number(back) || 0);
+    if (kind === 'custom') { const r = listRange('range', from, to); return r && { ...r, kind, back: 0 }; }
+    if (kind === '7' || kind === '28') {
+      const n = Number(kind), end = addD(lastDate, -n * back), start = addD(end, -(n - 1));
+      if (firstDate && end < firstDate) return null;
+      return { start, end, month: '', kind, back };
+    }
+    const [y, m] = lastDate.split('-').map(Number);
+    const ym = new Date(Date.UTC(y, m - 1 - back, 1)).toISOString().slice(0, 7);
+    const end = monthEndOf(ym);
+    if (firstDate && end < firstDate) return null;
+    return { start: `${ym}-01`, end, month: ym, kind: 'month', back };
+  }
+  /** 0.8.0 の初め（今月・先月・投稿日の範囲）の設定からの読みかえ */
+  function listSelOf(c) {
+    if (c.listKind) return { kind: ['7', '28', 'month', 'custom'].includes(c.listKind) ? c.listKind : 'month', back: Number(c.listBack) || 0 };
+    if (c.listPeriod === 'this') return { kind: 'month', back: 0 };
+    if (c.listPeriod === 'range') return { kind: 'custom', back: 0 };
+    return { kind: 'month', back: 1 };
+  }
+
   const RANKS = [['imp', 'インプレッション数'], ['pv', 'PV数'], ['like', 'スキ数'], ['comment', 'コメント数'], ['ctr', '開封率'], ['likeRate', 'スキ率']];
   /** 率は分数のまま比べる（小数の誤差で同じ数を見落とさないため）。{ n, d } */
   const frac = (a, k) => (k === 'ctr' ? { n: a.pv, d: a.imp } : k === 'likeRate' ? { n: a.like, d: a.pv } : { n: a[k], d: 1 });
@@ -112,13 +142,13 @@ const PenShare = (() => {
     return p;
   }
 
-  const calc = { listRange, listDoc, palette, PALETTE, jstMonthOf };
+  const calc = { listRange, listSpan, listSelOf, listDoc, palette, PALETTE, jstMonthOf };
   if (typeof document === 'undefined') return { calc };
 
   /* ==================== 画面 ==================== */
   const conf = () => ({
     period: true, top: true, n: 5, metric: 'pv', graph: true, mark: true, tab: 'text', color: 'auto', daily: false,
-    listPeriod: 'last', listFrom: '', listTo: '', listHead: true, listReview: true, listForm: 'rich',
+    listPeriod: 'last', listKind: '', listBack: 1, listFrom: '', listTo: '', listHead: true, listReview: true, listForm: 'rich',
     ...((S.settings && S.settings.share) || {}),
   });
   async function setConf(patch) { S.settings.share = { ...conf(), ...patch }; await saveSettings('share'); render(); }
@@ -313,8 +343,12 @@ const PenShare = (() => {
   }
 
   /* ---------- 記事の一覧（v0.8.0 ⑥） ---------- */
+  /** 一覧でさかのぼれるのは、いちばん古い記事の公開日まで（数字はいちばん新しい記録の累計なので、記録を始める前の期間も出せる） */
+  const firstRec = () => { const cur = latest(); let m = ''; for (const i of (cur && cur.items) || []) { const d = jstDayOf(i.publishedAt); if (d && (!m || d < m)) m = d; } return m; };
+  const spanOf = (c, back) => { const ls = listSelOf(c), cur = latest(); return cur ? listSpan(ls.kind, back == null ? ls.back : back, cur.date, firstRec(), c.listFrom, c.listTo) : null; };
+  const spanText = (r) => (r.month ? `${+r.month.slice(0, 4)}年${+r.month.slice(5)}月` : `${ymd(r.start)}〜${r.start.slice(0, 4) === r.end.slice(0, 4) ? ymd(r.end).slice(5) : ymd(r.end)}`);
   function listData(c) {
-    const r = listRange(c.listPeriod, c.listFrom, c.listTo);
+    const r = spanOf(c);
     const cur = latest();
     if (!r || !cur) return null;
     return { range: r, ...listDoc(cur.items || [], { start: r.start, end: r.end, month: r.month, head: c.listHead, review: c.listReview }), recDate: cur.date };
@@ -347,16 +381,23 @@ const PenShare = (() => {
   function renderList(box, c) {
     const L = listData(c);
     X.list = L;
-    const thisM = +jstMonthOf(0).slice(5), lastM = +jstMonthOf(-1).slice(5);
-    const PRE = [['this', `今月（${thisM}月）`], ['last', `先月（${lastM}月）`], ['range', '投稿日の範囲']];
-    const pre = PRE.some(([k]) => k === c.listPeriod) ? c.listPeriod : 'last';
+    const KINDS = [['7', '7日'], ['28', '28日'], ['month', '月ごと'], ['custom', 'カスタム']];
+    const ls = listSelOf(c), pre = ls.kind;
+    const hasPrev = pre !== 'custom' && !!spanOf(c, ls.back + 1), hasNext = pre !== 'custom' && ls.back > 0;
+    const unit = pre === 'month' ? '月' : `${pre}日`;
     const head = L ? `${L.headText}` : '';
     box.innerHTML = `<div class="pop-head"><h3 id="shareTitle">共有用に出す <span class="meta">${esc(head)}</span></h3><button class="btn small" data-share="close" aria-label="閉じる">×</button></div>
-      <p class="hint">まとめ記事に貼るための、期間に公開した記事の一覧です（公開の古い順）。期間は「期間の動き」とは別に選べます。数字は、いちばん新しい記録（${L ? esc(fmtDate(L.recDate)) : '–'}）の累計です。</p>
+      <p class="hint">まとめ記事に貼るための、期間に公開した記事の一覧です（公開の古い順）。期間は「期間の動き」とは別に選べます（7日・28日は、いちばん新しい記録の日までの日数です）。数字は、いちばん新しい記録（${L ? esc(fmtDate(L.recDate)) : '–'}）の累計です。</p>
       ${tabs(c)}
       <div class="share-opts">
-        <label>期間 <select data-sopt="listPeriod">${PRE.map(([k, l]) => `<option value="${k}" ${k === pre ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
-        <span class="custom-range" ${pre === 'range' ? '' : 'hidden'}><input type="date" data-sopt="listFrom" aria-label="投稿日の範囲の最初の日" value="${esc(c.listFrom)}">〜<input type="date" data-sopt="listTo" aria-label="投稿日の範囲の最後の日" value="${esc(c.listTo)}"></span>
+        <label>期間 <select data-sopt="listKind" aria-label="記事の一覧の期間">${KINDS.map(([k, l]) => `<option value="${k}" ${k === pre ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+        ${pre === 'custom' ? '' : `<span class="share-nav">
+          <button type="button" class="btn small" data-lnav="back" ${hasPrev ? '' : 'disabled'} aria-label="前の${unit}">← 前</button>
+          <b class="share-range" id="listRange">${L ? esc(spanText(L.range)) : ''}</b>
+          <button type="button" class="btn small" data-lnav="fwd" ${hasNext ? '' : 'disabled'} aria-label="次の${unit}">次 →</button>
+          <button type="button" class="btn small" data-lnav="latest" ${ls.back ? '' : 'disabled'}>最新</button>
+        </span>`}
+        <span class="custom-range" ${pre === 'custom' ? '' : 'hidden'}><input type="date" data-sopt="listFrom" aria-label="投稿日の範囲の最初の日" value="${esc(c.listFrom)}">〜<input type="date" data-sopt="listTo" aria-label="投稿日の範囲の最後の日" value="${esc(c.listTo)}"></span>
         <label class="check"><input type="checkbox" data-sopt="listHead" ${c.listHead ? 'checked' : ''}> 期間の見出し</label>
         <label class="check"><input type="checkbox" data-sopt="listReview" ${c.listReview ? 'checked' : ''}> 「振り返り：」の欄</label>
         <label>貼り付けの形 <select data-sopt="listForm"><option value="rich" ${c.listForm !== 'marked' ? 'selected' : ''}>見出し・太字・リンクの付いた形</option><option value="marked" ${c.listForm === 'marked' ? 'selected' : ''}>記号付きの文字（### や ** を使う）</option></select></label>
@@ -485,9 +526,10 @@ const PenShare = (() => {
   }
 
   document.addEventListener('click', (e) => {
-    const b = e.target.closest && e.target.closest('[data-share],[data-stab],[data-snav]');
+    const b = e.target.closest && e.target.closest('[data-share],[data-stab],[data-snav],[data-lnav]');
     if (!b || b.disabled) return;
     if (b.dataset.stab) { setConf({ tab: b.dataset.stab }); return; }
+    if (b.dataset.lnav) { const ls = listSelOf(conf()), a = b.dataset.lnav; setConf({ listKind: ls.kind, listBack: a === 'back' ? ls.back + 1 : a === 'fwd' ? Math.max(0, ls.back - 1) : 0 }); return; }
     if (b.dataset.snav) { const nv = PenPeriods.navState(); const a = b.dataset.snav; changePeriod(() => PenPeriods.go(a === 'back' ? nv.back + 1 : a === 'fwd' ? nv.back - 1 : 0)); return; }
     const a = b.dataset.share;
     if (a === 'close') close();
@@ -501,8 +543,12 @@ const PenShare = (() => {
     if (!t || !t.dataset || !t.dataset.sopt || !isOpen()) return;
     const k = t.dataset.sopt;
     const patch = { [k]: t.type === 'checkbox' ? t.checked : k === 'n' ? Number(t.value) : t.value };
-    // 投稿日の範囲を初めて選んだときは、先月の1日〜月末を入れておく
-    if (k === 'listPeriod' && t.value === 'range' && !conf().listFrom && !conf().listTo) { const r = listRange('last'); patch.listFrom = r.start; patch.listTo = r.end; }
+    // 記事の一覧の期間を変えたら、いちばん新しい期間から。カスタムを選んだときは、今見ている期間の日付を入れておく
+    if (k === 'listKind') {
+      patch.listBack = 0;
+      if (t.value === 'custom') { const r = spanOf(conf()); if (r) { patch.listFrom = r.start; patch.listTo = r.end; } }
+    }
+    if (k === 'listFrom' || k === 'listTo') patch.listKind = 'custom';
     setConf(patch);
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) close(); });

@@ -102,6 +102,11 @@ function unitTests() {
   ok(range.month === '2026-10', '1日〜月末の範囲は「月間」');
   ok(SC.listRange('range', '2026-10-01', '2026-10-15').month === '', '月の途中までの範囲は「期間」');
   ok(SC.listRange('last', '', '', Date.parse('2026-11-03T00:00:00Z')).start === '2026-10-01' && SC.listRange('this', '', '', Date.parse('2026-10-31T16:00:00Z')).start === '2026-11-01', '今月・先月は日本時間');
+  ok(JSON.stringify(SC.listSpan('7', 0, '2026-10-31', '2026-09-25')) === JSON.stringify({ start: '2026-10-25', end: '2026-10-31', month: '', kind: '7', back: 0 }), '一覧の期間：7日はいちばん新しい記録の日まで');
+  ok(SC.listSpan('28', 1, '2026-10-31', '2026-09-25').end === '2026-10-03' && SC.listSpan('28', 2, '2026-10-31', '2026-09-25') === null, '一覧の期間：28日の1つ前・記録を始める前は無い');
+  ok(SC.listSpan('month', 0, '2026-11-04', '').month === '2026-11' && SC.listSpan('month', 1, '2026-11-04', '').end === '2026-10-31' && SC.listSpan('month', 2, '2026-03-15', '').start === '2026-01-01', '一覧の期間：月ごと（年をまたぐ）');
+  ok(SC.listSpan('custom', 0, '2026-10-31', '', '2026-10-01', '2026-10-31').month === '2026-10', '一覧の期間：カスタム');
+  ok(JSON.stringify(SC.listSelOf({ listPeriod: 'this' })) === '{"kind":"month","back":0}' && JSON.stringify(SC.listSelOf({ listPeriod: 'range' })) === '{"kind":"custom","back":0}' && JSON.stringify(SC.listSelOf({})) === '{"kind":"month","back":1}', '0.8.0 の初めの設定（今月・先月・投稿日の範囲）を読みかえる');
   let d = SC.listDoc(latest, range);
   ok(d.count === 3 && d.rows.map((x) => x.key).join() === 'a2,a3,a4', `公開の古い順・下書きと消した記事は出さない（${d.rows.map((x) => x.key)}）`);
   ok(d.md.startsWith('### 2026年10月 全3本\n\n### 1. [十月の一本目](https://note.com/fake/n/a2)\n\n公開日：2026/10/1\n**IMP** 3,100 / **PV** 310 / **スキ** 31（開封率 10.0% / スキ率 10.0%）\n※インプレッション数月間1位・PV数月間1位\n\n**振り返り：**\n\n### 2. '), '記事の一覧の形（参考記事と同じ）');
@@ -270,10 +275,24 @@ async function uiTests() {
 
   // 6. 記事の一覧
   await page.click('[data-stab="list"]'); await page.waitForTimeout(300);
-  ok(await page.$eval('[data-sopt="listPeriod"]', (e) => e.value) === 'last', '記事の一覧：期間は初めは先月');
-  await page.selectOption('[data-sopt="listPeriod"]', 'range'); await page.waitForTimeout(200);
-  await page.fill('[data-sopt="listFrom"]', '2026-10-01'); await page.dispatchEvent('[data-sopt="listFrom"]', 'change'); await page.waitForTimeout(200);
-  await page.fill('[data-sopt="listTo"]', '2026-10-31'); await page.dispatchEvent('[data-sopt="listTo"]', 'change'); await page.waitForTimeout(300);
+  ok(await page.$eval('[data-sopt="listKind"]', (e) => e.value) === 'month' && (await page.textContent('#listRange')).trim() === '2026年9月', '記事の一覧：初めは月ごとの「先月」（いちばん新しい記録 10/31 の前の月）');
+  ok(await page.isDisabled('[data-lnav="back"]'), '記事の一覧：いちばん古い記事（9/1 公開）より前の月には行かない');
+  await page.click('[data-lnav="fwd"]'); await page.waitForTimeout(300);
+  ok((await page.textContent('#listRange')).trim() === '2026年10月' && (await page.textContent('#shareList')).includes('2026年10月 全3本') && await page.isDisabled('[data-lnav="fwd"]'), '記事の一覧：「次 →」で10月（いちばん新しい月）');
+  await page.selectOption('[data-sopt="listKind"]', '7'); await page.waitForTimeout(300);
+  ok((await page.textContent('#listRange')).trim() === '2026/10/25〜10/31' && (await page.textContent('#shareList')).includes('2026/10/25〜2026/10/31 全1本') && (await page.textContent('#shareList')).includes('月末の記事'), `記事の一覧：7日（${(await page.textContent('#listRange')).trim()}）`);
+  await page.click('[data-lnav="back"]'); await page.waitForTimeout(300);
+  ok((await page.textContent('#listRange')).trim() === '2026/10/18〜10/24' && (await page.textContent('#sharePop')).includes('この期間に公開した記事はありません'), '記事の一覧：7日の「← 前」（公開なし）');
+  for (let i = 0; i < 7; i++) { await page.click('[data-lnav="back"]'); await page.waitForTimeout(150); }
+  ok((await page.textContent('#listRange')).trim() === '2026/8/30〜9/5' && (await page.textContent('#shareList')).includes('古い記事') && await page.isDisabled('[data-lnav="back"]'), `記事の一覧：記録を始める前（9/25 より前）の期間にもさかのぼれる・いちばん古い記事まで（${(await page.textContent('#listRange')).trim()}）`);
+  await page.click('[data-lnav="latest"]'); await page.waitForTimeout(300);
+  ok((await page.textContent('#listRange')).trim() === '2026/10/25〜10/31', '記事の一覧：「最新」で戻る');
+  await page.selectOption('[data-sopt="listKind"]', '28'); await page.waitForTimeout(300);
+  const l28 = await page.textContent('#shareList');
+  ok((await page.textContent('#listRange')).trim() === '2026/10/4〜10/31' && l28.includes('全2本') && l28.includes('期間1位') && !l28.includes('月間'), '記事の一覧：28日（期間1位）');
+  await page.selectOption('[data-sopt="listKind"]', 'custom'); await page.waitForTimeout(300);
+  ok(await page.inputValue('[data-sopt="listFrom"]') === '2026-10-04' && await page.inputValue('[data-sopt="listTo"]') === '2026-10-31' && !(await page.$('[data-lnav]')), '記事の一覧：カスタムを選ぶと、見ていた期間の日付が入る');
+  await page.fill('[data-sopt="listFrom"]', '2026-10-01'); await page.dispatchEvent('[data-sopt="listFrom"]', 'change'); await page.waitForTimeout(300);
   const prev = await page.textContent('#shareList');
   ok(prev.includes('2026年10月 全3本') && prev.includes('十月の一本目') && !prev.includes('下書きに戻した') && !prev.includes('消した記事'), '記事の一覧：見本（下書き・消した記事は出ない）');
   ok(await page.$('#shareList a[href="https://note.com/fake/n/a2"]') && await page.$('#shareList h3') && await page.$('#shareList strong'), '記事の一覧：見本に見出し・リンク・太字');
@@ -295,7 +314,7 @@ async function uiTests() {
   const noHead = await page.inputValue('#shareList');
   ok(noHead.startsWith('### 1. ') && !noHead.includes('振り返り'), '見出し・振り返りの欄を外せる');
   const sh = (await settingsOf(page)).share;
-  ok(sh.listPeriod === 'range' && sh.listForm === 'marked' && sh.listHead === false && sh.color === 'auto' && sh.daily === true, `共有の設定に覚える（${JSON.stringify(sh)}）`);
+  ok(sh.listKind === 'custom' && sh.listFrom === '2026-10-01' && sh.listForm === 'marked' && sh.listHead === false && sh.color === 'auto' && sh.daily === true, `共有の設定に覚える（${JSON.stringify(sh)}）`);
   // 0.7.2 までの共有の設定（項目が少ない）でも開ける
   await page.evaluate(async () => { S.settings.share = { period: true, top: true, n: 5, metric: 'pv', graph: true, mark: true, tab: 'image' }; await saveSettings('share'); PenShare.refresh(); });
   ok(await page.$('#sharePreview canvas') && !(await page.isChecked('[data-sopt="daily"]')), '0.7.2 までの共有の設定でも開ける（足した項目は初めの値）');
