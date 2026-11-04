@@ -421,10 +421,14 @@ html[data-theme="demon"] #tab-map { --q-tr: #4cc27d; --q-br: #ff7b72; --q-tl: #5
 .grid.compare th { cursor: default; }
 .grid.compare .barcell { width: 22%; min-width: 80px; text-align: left; }
 .hbar { display: inline-block; height: 10px; border-radius: 3px; background: var(--c-pv); vertical-align: middle; min-width: 1px; }
+.hbar.c-imp { background: var(--c-imp); } .hbar.c-pv { background: var(--c-pv); } .hbar.c-like { background: var(--c-like); } .hbar.c-comment { background: var(--c-comment); }
+.grid.compare.avg td .meta { font-size: 11px; white-space: nowrap; }
 .grid.compare.arts td.l { min-width: 220px; max-width: 360px; }
 @media (max-width: 640px) { .grid.compare .barcell { display: none; } .grid.compare.arts td.l { min-width: 160px; } }
 .rank .rrow { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
-.rank .rnum { font-variant-numeric: tabular-nums; color: var(--text-2); white-space: nowrap; margin-left: auto; }
+.rank .rnum { font-variant-numeric: tabular-nums; color: var(--text-2); margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 1em; }
+/* v0.8.0：伸びた記事の数字は「インプレッション +1」などのまとまりごとに折り返す（言葉の途中では折り返さない） */
+.rank .rnum .rn { white-space: nowrap; }
 @media (max-width: 640px) { .rank .rnum { font-size: 12px; } }
 
 /* v0.6.0 期間の動き（全体の数字の期間比較） */
@@ -565,6 +569,18 @@ body.pop-open { overflow: hidden; }
 .share-text { width: 100%; font: 13px/1.7 inherit; font-family: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; margin-bottom: 10px; }
 .share-preview { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 8px; margin-bottom: 10px; max-height: 60vh; overflow: auto; }
 .share-canvas { display: block; width: 100%; height: auto; }
+/* v0.8.0 ⑥：記事の一覧の見本（noteの編集画面に近い見た目） */
+.share-list-preview { padding: 10px 14px; font-size: 13px; line-height: 1.7; }
+.share-list-preview h3 { font-size: 15px; margin: 12px 0 4px; }
+.share-list-preview h3:first-child { margin-top: 0; }
+.share-list-preview p { margin: 0 0 6px; }
+.share-pop .custom-range input[type=date] { max-width: 9.5em; }
+/* v0.8.0：共有の画面の期間 */
+.share-period { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 6px 0 4px; font-size: 13px; }
+.share-pop .pk-seg { display: none; }
+.share-pop .pk-select { display: inline-block; width: auto; }
+.share-nav { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.share-range { font-variant-numeric: tabular-nums; }
 
 /* v0.6.0 ⑥ 記事を選んでダウンロード */
 #bodyExport .custom-range input[type="date"] { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
