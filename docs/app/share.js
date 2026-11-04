@@ -147,7 +147,7 @@ const PenShare = (() => {
 
   /* ==================== 画面 ==================== */
   const conf = () => ({
-    period: true, top: true, n: 5, metric: 'pv', graph: true, mark: true, tab: 'text', color: 'auto', daily: false,
+    period: true, top: true, n: 5, metric: 'pv', graph: true, mark: true, tab: 'text', color: 'auto', daily: false, dailyType: 'bar',
     listPeriod: 'last', listKind: '', listBack: 1, listFrom: '', listTo: '', listHead: true, listReview: true, listForm: 'rich',
     ...((S.settings && S.settings.share) || {}),
   });
@@ -207,8 +207,9 @@ const PenShare = (() => {
   function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   const DAILY_H = 340;
 
-  /** 日ごとの増えた数の棒（v0.8.0 ⑤）。y から高さ DAILY_H を使う */
+  /** 日ごとの増えた数のグラフ（v0.8.0 ⑤）。棒（c.dailyType 'bar'）か折れ線（'line'）。y から高さ DAILY_H を使う */
   function drawDaily(ctx, D, c, COL, x0, y0, w) {
+    const line = c.dailyType === 'line';
     const k = D.metric, color = COL[k] || COL.pv, days = D.days.cur, prev = D.days.overlay ? D.days.prev : null;
     const md = (d) => { const [, m, dd] = d.split('-'); return `${+m}/${+dd}`; };
     ctx.fillStyle = COL.text; ctx.font = `700 28px ${FONT}`; const hd = `日ごとの${D.metricLabel}`; ctx.fillText(hd, x0, y0 + 28);
@@ -231,14 +232,32 @@ const PenShare = (() => {
     for (const t of [0, max]) { ctx.beginPath(); ctx.moveTo(x0 + LW, yv(t)); ctx.lineTo(x0 + w, yv(t)); ctx.stroke(); }
     ctx.fillStyle = COL.muted; ctx.font = `18px ${FONT}`; ctx.textAlign = 'right';
     ctx.fillText(fmt(max), x0 + LW - 10, yv(max) + 6); ctx.fillText('0', x0 + LW - 10, base + 6); ctx.textAlign = 'left';
-    days.forEach((d, i) => {
-      const v = vals[i];
-      if (v == null) return;
-      const hgt = Math.max(v > 0 ? 2 : 0, (v / max) * ph);
-      ctx.globalAlpha = d.partial || d.span > 1 ? 0.5 : 1;
-      ctx.fillStyle = color; ctx.fillRect(xc(i) - barW / 2, base - hgt, barW, hgt);
-      ctx.globalAlpha = 1;
-    });
+    if (line) {
+      // 折れ線：記録のない日をはさむところは細い点線でつなぐ（「期間の動き」の線グラフと同じ）
+      let last = -1;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
+      vals.forEach((v, i) => { if (v == null) return; if (last >= 0 && i - last > 1) { ctx.beginPath(); ctx.moveTo(xc(last), yv(vals[last])); ctx.lineTo(xc(i), yv(v)); ctx.stroke(); } last = i; });
+      ctx.setLineDash([]); ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.beginPath();
+      let pen = false;
+      vals.forEach((v, i) => { if (v == null) { pen = false; return; } if (pen) ctx.lineTo(xc(i), yv(v)); else ctx.moveTo(xc(i), yv(v)); pen = true; });
+      ctx.stroke();
+      // 点：途中の日・数日分がまとまった日は白抜き
+      if (n <= 62) vals.forEach((v, i) => {
+        if (v == null) return;
+        const d = days[i], hollow = d.partial || d.span > 1;
+        ctx.beginPath(); ctx.arc(xc(i), yv(v), hollow ? 6 : 4.5, 0, Math.PI * 2);
+        if (hollow) { ctx.fillStyle = COL.bg; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = color; ctx.stroke(); } else { ctx.fillStyle = color; ctx.fill(); }
+      });
+    } else {
+      days.forEach((d, i) => {
+        const v = vals[i];
+        if (v == null) return;
+        const hgt = Math.max(v > 0 ? 2 : 0, (v / max) * ph);
+        ctx.globalAlpha = d.partial || d.span > 1 ? 0.5 : 1;
+        ctx.fillStyle = color; ctx.fillRect(xc(i) - barW / 2, base - hgt, barW, hgt);
+        ctx.globalAlpha = 1;
+      });
+    }
     if (prev) {
       ctx.strokeStyle = COL.prev; ctx.lineWidth = 2.5; ctx.setLineDash([6, 5]); ctx.beginPath();
       let pen = false;
@@ -252,7 +271,10 @@ const PenShare = (() => {
     ctx.textAlign = 'left';
     const none = days.filter((d) => !d.v && !d.future).length;
     ctx.fillStyle = COL.muted; ctx.font = `18px ${FONT}`;
-    ctx.fillText(fit(ctx, `${none ? `記録のない日（${none}日）は棒がありません。` : ''}${days.some((d) => d.partial || d.span > 1) ? '薄い棒は途中の日・数日分がまとまった日です。' : ''}`, w), x0, base + 58);
+    const multi = days.some((d) => d.partial || d.span > 1);
+    ctx.fillText(fit(ctx, line
+      ? `${none ? `記録のない日（${none}日）は点がなく、前後を細い点線でつないでいます。` : ''}${multi ? '白抜きの点は途中の日・数日分がまとまった日です。' : ''}`
+      : `${none ? `記録のない日（${none}日）は棒がありません。` : ''}${multi ? '薄い棒は途中の日・数日分がまとまった日です。' : ''}`, w), x0, base + 58);
   }
 
   function drawImage(D, c) {
@@ -448,6 +470,7 @@ const PenShare = (() => {
       : `
         <div class="share-img-opts">
           <label class="check"><input type="checkbox" data-sopt="daily" ${c.daily ? 'checked' : ''}> 日ごとの増えた数のグラフ（「並べる数字」の数字）</label>
+          ${c.daily ? `<span class="seg" role="group" aria-label="日ごとのグラフの形"><button type="button" data-sdtype="bar" aria-pressed="${c.dailyType !== 'line'}">棒</button><button type="button" data-sdtype="line" aria-pressed="${c.dailyType === 'line'}">折れ線</button></span>` : ''}
           <label class="check"><input type="checkbox" data-sopt="graph" ${c.graph ? 'checked' : ''}> 伸びた記事にグラフを付ける</label>
           <label class="check"><input type="checkbox" data-sopt="mark" ${c.mark ? 'checked' : ''}> 画像の端に小さく「Pen」と入れる</label>
           <label>色 <select data-sopt="color" aria-label="画像の色">${[['auto', `今の画面に合わせる（${scheme === 'dark' ? '暗い' : '明るい'}）`], ['light', '明るい'], ['dark', '暗い']].map(([k, l]) => `<option value="${k}" ${k === (c.color === 'light' || c.color === 'dark' ? c.color : 'auto') ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
@@ -526,9 +549,10 @@ const PenShare = (() => {
   }
 
   document.addEventListener('click', (e) => {
-    const b = e.target.closest && e.target.closest('[data-share],[data-stab],[data-snav],[data-lnav]');
+    const b = e.target.closest && e.target.closest('[data-share],[data-stab],[data-snav],[data-lnav],[data-sdtype]');
     if (!b || b.disabled) return;
     if (b.dataset.stab) { setConf({ tab: b.dataset.stab }); return; }
+    if (b.dataset.sdtype) { setConf({ dailyType: b.dataset.sdtype === 'line' ? 'line' : 'bar' }); return; }
     if (b.dataset.lnav) { const ls = listSelOf(conf()), a = b.dataset.lnav; setConf({ listKind: ls.kind, listBack: a === 'back' ? ls.back + 1 : a === 'fwd' ? Math.max(0, ls.back - 1) : 0 }); return; }
     if (b.dataset.snav) { const nv = PenPeriods.navState(); const a = b.dataset.snav; changePeriod(() => PenPeriods.go(a === 'back' ? nv.back + 1 : a === 'fwd' ? nv.back - 1 : 0)); return; }
     const a = b.dataset.share;

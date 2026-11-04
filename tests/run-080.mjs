@@ -235,6 +235,18 @@ async function uiTests() {
   writeFileSync(join(OUT, 'share-image-dark.png'), Buffer.from((await page.$eval('#sharePreview canvas', (c) => c.toDataURL('image/png'))).split(',')[1], 'base64'));
   await page.selectOption('[data-sopt="color"]', 'light'); await page.waitForTimeout(300);
   writeFileSync(join(OUT, 'share-image-light.png'), Buffer.from((await page.$eval('#sharePreview canvas', (c) => c.toDataURL('image/png'))).split(',')[1], 'base64'));
+  // 日ごとのグラフの形（棒・折れ線）
+  ok(await page.getAttribute('[data-sdtype="bar"]', 'aria-pressed') === 'true', '日ごとのグラフ：初めは棒');
+  const barUrl = await page.$eval('#sharePreview canvas', (c) => c.toDataURL('image/png'));
+  await page.click('[data-sdtype="line"]'); await page.waitForTimeout(300);
+  const lineUrl = await page.$eval('#sharePreview canvas', (c) => c.toDataURL('image/png'));
+  ok(await page.getAttribute('[data-sdtype="line"]', 'aria-pressed') === 'true' && lineUrl !== barUrl && (await settingsOf(page)).share.dailyType === 'line', '日ごとのグラフ：折れ線に切り替えられる（設定に覚える）');
+  ok(await page.$eval('#sharePreview canvas', (c) => c.height) === h1, '日ごとのグラフ：折れ線でも高さは同じ');
+  writeFileSync(join(OUT, 'share-image-line.png'), Buffer.from(lineUrl.split(',')[1], 'base64'));
+  await reload(page, url); await openShare(page, 'image');
+  ok(await page.getAttribute('[data-sdtype="line"]', 'aria-pressed') === 'true', '日ごとのグラフ：開き直しても折れ線のまま');
+  await page.click('[data-sdtype="bar"]'); await page.waitForTimeout(300);
+  ok((await page.$eval('#sharePreview canvas', (c) => c.toDataURL('image/png'))) === barUrl, '日ごとのグラフ：棒に戻せる（元と同じ画像）');
   // 棒グラフにすると重ねない
   await page.click('[data-share="close"]');
   await page.click('[data-ctype="bar"]'); await page.waitForTimeout(300);
