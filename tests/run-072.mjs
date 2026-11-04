@@ -293,7 +293,7 @@ async function webTest() {
 function staticTests() {
   console.log('■ 版・権限・説明');
   const m = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
-  ok(m.version === '0.7.2', `版の番号 ${m.version}`);
+  ok(/^0\.(7\.2|8\.\d+)$/.test(m.version), `版の番号 ${m.version}`);
   ok(JSON.stringify(m.permissions) === JSON.stringify(['unlimitedStorage']) && JSON.stringify(m.host_permissions) === JSON.stringify(['https://note.com/*']), '権限は増えていない');
   const priv = readFileSync(join(ROOT, 'PRIVACY.md'), 'utf8'), web = readFileSync(join(ROOT, 'web', 'privacy.html'), 'utf8');
   ok(priv.includes('@noah_woaks') && web.includes('@noah_woaks'), 'プライバシーの説明に魔王ノアのフォローの確認');

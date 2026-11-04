@@ -204,10 +204,57 @@ const PenPeriods = (() => {
     return { ...t, ctr: r(t.ctrPv, t.ctrImp), likeRate: r(t.like, t.pv), commentRate: r(t.comment, t.pv) };
   }
 
-  const calc = { addDays, diffDays, jstDay, lastOnOrBefore, growth, resolve, before, sameDays, buckets, publishedIn, daily, rateTotals };
+  /**
+   * v0.8.0 ④：区切り（start〜end）に公開した記事の平均。
+   * 公開日は記事の情報（日本時間）。いちばん新しい記録に無い記事（消した・下書きに戻した等）は数えない。
+   * mode 'total' … いちばん新しい記録でのその記事の累計
+   * mode 'day7'  … 公開日を1日目として7日目（公開日の6日後）の日の終わりの記録の累計。
+   *                その日の記録が無ければ、それより前の最後の記録（その記事が載っているもの）。無ければ数えない。
+   *                7日目がまだ終わっていない記事（7日目が今日以降・最後の記録より後）は数えない。
+   * 率は合計で割る：開封率＝合計のPV÷合計のインプレッション、スキ率＝合計のスキ÷合計のPV（分母0は null）
+   * 戻り値 { published, counted, skipped, notYet, noRecord, sum:{imp,pv,like,comment}, avg:{...}|null, ctr, likeRate }
+   */
+  function day7Of(snaps, key, pub, today) {
+    const target = addDays(pub, 6);
+    const last = snaps[snaps.length - 1];
+    if (!last || target > last.date || (today && target >= today)) return { notYet: true };
+    // target 以前で、その記事が載っている最後の記録
+    let lo = 0, hi = snaps.length - 1, idx = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (snaps[m].date <= target) { idx = m; lo = m + 1; } else hi = m - 1; }
+    for (let i = idx; i >= 0 && snaps[i].date >= pub; i--) {
+      const s = snaps[i];
+      const it = typeof s.get === 'function' ? s.get(key) : (s.items || []).find((x) => x.key === key);
+      if (it) return { item: it, date: s.date };
+    }
+    return { none: true };
+  }
+  function pubAverages(snaps, start, end, mode = 'total', today = '') {
+    const res = { published: 0, counted: 0, skipped: 0, notYet: 0, noRecord: 0, sum: { imp: 0, pv: 0, like: 0, comment: 0 }, avg: null, ctr: null, likeRate: null };
+    // 下書き・公開をやめた記事（状態が published 以外）は数えない（記事の一覧のコピーと同じ）
+    const list = publishedIn(snaps, start, end).filter((i) => !i.status || i.status === 'published');
+    res.published = list.length;
+    for (const i of list) {
+      let v = i;
+      if (mode === 'day7') {
+        const r = day7Of(snaps, i.key, jstDay(i.publishedAt), today);
+        if (r.notYet) { res.notYet++; res.skipped++; continue; }
+        if (r.none) { res.noRecord++; res.skipped++; continue; }
+        v = r.item;
+      }
+      res.counted++;
+      for (const k of ['imp', 'pv', 'like', 'comment']) res.sum[k] += Number(v[k]) || 0;
+    }
+    if (res.counted) res.avg = Object.fromEntries(Object.entries(res.sum).map(([k, x]) => [k, x / res.counted]));
+    res.ctr = res.sum.imp > 0 ? res.sum.pv / res.sum.imp : null;
+    res.likeRate = res.sum.pv > 0 ? res.sum.like / res.sum.pv : null;
+    return res;
+  }
+
+  const calc = { addDays, diffDays, jstDay, lastOnOrBefore, growth, resolve, before, sameDays, buckets, publishedIn, daily, rateTotals, day7Of, pubAverages };
   if (typeof document === 'undefined') return { calc };
 
   /* ==================== 画面 ==================== */
+  // artMetric・artShown は 0.7.2 までの「記事ごと」の表のもの（0.8.0 で表を外した。残っていても読み飛ばすだけ）
   const P = { artMetric: 'pv', artShown: 20, listMetric: 'pv', back: 0, flow: 'entry' };
   const LABEL = { pv: 'PV', like: 'スキ', comment: 'コメント', imp: 'インプレッション', follower: 'フォロワー', articles: '記事数' };
   const SHORT = { pv: 'PV', like: 'スキ', comment: 'コメント', imp: 'インプレッション', follower: 'フォロワー', articles: '公開本数' };
@@ -594,11 +641,19 @@ const PenPeriods = (() => {
     const rows = g.cur.items.map((i) => ({ i, x: g.items.get(i.key) })).filter((o) => o.x && o.x.d && o.x.d[k] > 0)
       .sort((a, b) => b.x.d[k] - a.x.d[k] || b.x.d.pv - a.x.d.pv).slice(0, 10);
     list.innerHTML = rows.length
-      ? rows.map(({ i, x }) => `<li><div class="rrow"><span class="rtitle"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a>${x.isNew ? '<span class="tag">期間中に公開</span>' : ''}</span><span class="rnum">PV ${signed(x.d.pv)}　スキ ${signed(x.d.like)}　コメント ${signed(x.d.comment)}</span></div></li>`).join('')
+      ? rows.map(({ i, x }) => `<li><div class="rrow"><span class="rtitle"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a>${x.isNew ? '<span class="tag">期間中に公開</span>' : ''}</span><span class="rnum">${['imp', 'pv', 'like', 'comment'].map((m) => `<span class="rn">${SHORT[m]} ${signed(x.d[m])}</span>`).join('')}</span></div></li>`).join('')
       : `<li class="meta">この期間に${SHORT[k]}が増えた記事はありません。</li>`;
   }
 
   /* ---------- 期間ごとの比較（最大8区切り） ---------- */
+  /** v0.8.0 ③：全体の合計の表の棒の数字（設定に覚える） */
+  const BAR_KEYS = ['imp', 'pv', 'like', 'comment'];
+  const barMetric = () => (BAR_KEYS.includes(S.settings && S.settings.compareBar) ? S.settings.compareBar : 'pv');
+  /** v0.8.0 ④：公開した記事の平均の数字の時点（'total' 今の累計／'day7' 公開から7日目） */
+  const avgMode = () => ((S.settings && S.settings.pubAvg) === 'day7' ? 'day7' : 'total');
+  const avgNum = (v) => (v == null ? '–' : Number(v).toLocaleString('ja-JP', { maximumFractionDigits: 1, minimumFractionDigits: 1 }));
+  const pct1 = (v) => (v == null ? '–' : `${(v * 100).toFixed(1)}%`);
+
   function renderCompare() {
     const wrap = $('#compareBody');
     if (!wrap) return;
@@ -607,48 +662,45 @@ const PenPeriods = (() => {
     const r = resolve(S.snapshots, sel(), P.back);
     $('#compareMeta').textContent = r.kind === 'prev' ? '記録と記録のあいだごと（新しい順）' : `${r.len}日ずつ・新しい順（最大8区切り）`;
     const ok = bs.filter((b) => b.status === 'ok');
-    const maxPv = Math.max(1, ...ok.map((b) => b.totals.pv || 0));
+    const bk = barMetric();
+    const maxV = Math.max(1, ...ok.map((b) => b.totals[bk] || 0));
     const cell = (b, k) => `<td>${b.totals[k] == null ? '–' : signed(b.totals[k])}</td>`;
+    const head = (b, idx) => `<td class="l"><b>${esc(rangeText(b))}</b>${idx === 0 ? ' <span class="tag">表示中</span>' : ''}${note(b) ? `<div class="warn">${esc(note(b))}</div>` : ''}</td>`;
     const totalRows = bs.map((b, idx) => {
       const pub = publishedIn(S.snapshots, b.start, b.end).length;
-      const head = `<td class="l"><b>${esc(rangeText(b))}</b>${idx === 0 ? ' <span class="tag">表示中</span>' : ''}${note(b) ? `<div class="warn">${esc(note(b))}</div>` : ''}</td>`;
-      if (b.status !== 'ok') return `<tr>${head}<td colspan="6" class="nodata-cell">記録なし${b.status === 'nobase' ? '（この区切りより前の記録がありません）' : '（この区切りの記録がありません）'}</td><td>${fmt(pub)}</td></tr>`;
-      const w = Math.max(0, Math.round(((b.totals.pv || 0) / maxPv) * 100));
-      return `<tr>${head}<td class="barcell"><span class="hbar" style="width:${w}%"></span></td>${cell(b, 'imp')}${cell(b, 'pv')}${cell(b, 'like')}${cell(b, 'comment')}${cell(b, 'follower')}<td>${fmt(pub)}</td></tr>`;
+      if (b.status !== 'ok') return `<tr>${head(b, idx)}<td colspan="6" class="nodata-cell">記録なし${b.status === 'nobase' ? '（この区切りより前の記録がありません）' : '（この区切りの記録がありません）'}</td><td>${fmt(pub)}</td></tr>`;
+      const w = Math.max(0, Math.round((Math.max(0, b.totals[bk] || 0) / maxV) * 100));
+      return `<tr>${head(b, idx)}<td class="barcell"><span class="hbar c-${bk}" style="width:${w}%"></span></td>${cell(b, 'imp')}${cell(b, 'pv')}${cell(b, 'like')}${cell(b, 'comment')}${cell(b, 'follower')}<td>${fmt(pub)}</td></tr>`;
     }).join('');
 
-    const k = P.artMetric;
-    const cur = latest();
-    const newest = bs[0];
-    const val = (key) => { const x = newest.status === 'ok' && newest.items.get(key); return x && x.d ? x.d[k] : -1; };
-    const arts = cur.items.slice().sort((a, b) => val(b.key) - val(a.key) || (b.publishedAt || '').localeCompare(a.publishedAt || ''));
-    const shown = arts.slice(0, P.artShown);
-    const artCell = (b, i) => {
-      if (b.status !== 'ok') return '<td class="nodata-cell">記録なし</td>';
-      const pub = jstDay(i.publishedAt);
-      if (pub && pub > b.end) return '<td class="muted-cell" title="まだ公開前">·</td>';
-      const x = b.items.get(i.key);
-      if (!x) return '<td class="muted-cell" title="この区切りの記録に無い記事">·</td>';
-      if (!x.d) return '<td class="nodata-cell" title="前の記録に無い記事">記録なし</td>';
-      const v = x.d[k];
-      return `<td class="${v > 0 ? 'up' : ''}">${signed(v)}${x.isNew ? '<sup title="この区切りに公開（0から数えています）">新</sup>' : ''}</td>`;
-    };
-    const artRows = shown.map((i) => `<tr><td class="l"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a></td>${bs.map((b) => artCell(b, i)).join('')}</tr>`).join('');
+    // 区切りに公開した記事の平均
+    const am = avgMode(), today = todayJst();
+    const avgRows = bs.map((b, idx) => {
+      const a = pubAverages(S.snapshots, b.start, b.end, am, today);
+      const skip = [a.notYet ? `7日目前 ${fmt(a.notYet)}本` : '', a.noRecord ? `記録なし ${fmt(a.noRecord)}本` : ''].filter(Boolean).join('・');
+      const n = `${fmt(a.counted)}本${am === 'day7' && skip ? `<div class="meta">${skip}は数えず</div>` : ''}`;
+      const v = (k) => `<td>${a.avg ? avgNum(a.avg[k]) : '–'}</td>`;
+      return `<tr>${head(b, idx)}<td>${n}</td>${v('imp')}${v('pv')}${v('like')}${v('comment')}<td>${pct1(a.ctr)}</td><td>${pct1(a.likeRate)}</td></tr>`;
+    }).join('');
 
-    wrap.innerHTML = `<h3 class="subhead">全体の合計（増えた数）</h3>
+    wrap.innerHTML = `<div class="card-head"><h3 class="subhead" style="margin:0">全体の合計（増えた数）</h3>
+        <div class="controls"><label>棒の数字 <select id="compareBar">${BAR_KEYS.map((m) => `<option value="${m}" ${m === bk ? 'selected' : ''}>${SHORT[m]}</option>`).join('')}</select></label>${typeof PenSettings !== 'undefined' ? PenSettings.link('compareBar') : ''}</div></div>
       <div class="table-wrap"><table class="grid compare">
-        <thead><tr><th class="l">区切り</th><th class="barcell">PV</th><th>インプレッション</th><th>PV</th><th>スキ</th><th>コメント</th><th>フォロワー</th><th>公開本数</th></tr></thead>
+        <thead><tr><th class="l">区切り</th><th class="barcell">${esc(SHORT[bk])}</th><th>インプレッション</th><th>PV</th><th>スキ</th><th>コメント</th><th>フォロワー</th><th>公開本数</th></tr></thead>
         <tbody>${totalRows}</tbody></table></div>
-      <div class="card-head" style="margin-top:14px"><h3 class="subhead" style="margin:0">記事ごと</h3>
-        <label class="controls">指標 <select id="compareMetric">${['pv', 'like', 'comment', 'imp'].map((m) => `<option value="${m}" ${m === k ? 'selected' : ''}>${SHORT[m]}</option>`).join('')}</select></label></div>
-      <p class="hint">いちばん左の区切りで伸びた順です。「新」はその区切りに公開された記事（0から数えています）、「·」はまだ公開前です。</p>
-      <div class="table-wrap"><table class="grid compare arts">
-        <thead><tr><th class="l">記事</th>${bs.map((b) => `<th>${esc(rangeText(b))}</th>`).join('')}</tr></thead>
-        <tbody>${artRows}</tbody></table></div>
-      ${arts.length > shown.length ? `<p><button class="btn small" id="compareMore">さらに表示（残り${arts.length - shown.length}件）</button></p>` : ''}`;
-    $('#compareMetric').addEventListener('change', (e) => { P.artMetric = e.target.value; renderCompare(); });
-    const more = $('#compareMore');
-    if (more) more.addEventListener('click', () => { P.artShown += 20; renderCompare(); });
+      <div class="card-head" style="margin-top:14px"><h3 class="subhead" style="margin:0">区切りに公開した記事の平均</h3>
+        <div class="controls"><div class="seg" role="group" aria-label="数字の時点" id="avgModeSeg">
+          <button type="button" data-avgmode="total" aria-pressed="${am === 'total'}">今の累計</button>
+          <button type="button" data-avgmode="day7" aria-pressed="${am === 'day7'}">公開から7日目</button>
+        </div>${typeof PenSettings !== 'undefined' ? PenSettings.link('pubAvg') : ''}</div></div>
+      <div class="table-wrap"><table class="grid compare avg">
+        <thead><tr><th class="l">区切り</th><th>公開本数</th><th>インプレッション</th><th>PV</th><th>スキ</th><th>コメント</th><th>開封率</th><th>スキ率</th></tr></thead>
+        <tbody>${avgRows}</tbody></table></div>
+      <p class="hint" id="avgHint">その区切りに公開した記事の、1記事あたりの数字です（公開日は日本時間）。${am === 'day7'
+        ? '「公開から7日目」は、公開した日を1日目として7日目（公開日の6日後）の日の終わりの記録の累計です。その日の記録がなければ、それより前の最後の記録を使います。7日目がまだ終わっていない記事と、記録がない記事は数えません。'
+        : '「今の累計」は、いちばん新しい記録でのその記事の累計です（公開が古い記事ほど数字が大きくなりやすいので、比べるときは「公開から7日目」も見てください）。'}開封率は合計のPV÷合計のインプレッション、スキ率は合計のスキ÷合計のPVです（記事ごとの率の平均ではありません）。分母が0のときは「–」です。消した記事・下書きに戻した記事など、いちばん新しい記録に無い記事は数えません。</p>`;
+    $('#compareBar').addEventListener('change', async (e) => { S.settings.compareBar = e.target.value; await saveSettings('compareBar'); renderCompare(); });
+    wrap.querySelectorAll('[data-avgmode]').forEach((btn) => btn.addEventListener('click', async () => { S.settings.pubAvg = btn.dataset.avgmode; await saveSettings('pubAvg'); renderCompare(); }));
   }
 
   /* ---------- 率（開封率・スキ率・コメント率） v0.6.0 ③ ---------- */
@@ -680,7 +732,13 @@ const PenPeriods = (() => {
         .sort((a, b) => b.x.d[metric] - a.x.d[metric] || b.x.d.pv - a.x.d.pv).slice(0, n)
         .map(({ i, x }, idx) => ({ rank: idx + 1, key: i.key, title: i.title, url: i.url, total: i[metric] || 0, inc: x.d[metric], d: x.d, isNew: x.isNew }));
     }
+    // v0.8.0 ⑤：日ごとの増えた数（画像のグラフ用）。前の期間を重ねるかは「期間の動き」の今のグラフに合わせる
+    const lastDate = snaps[snaps.length - 1].date, today = todayJst();
+    const rows = (x) => daily(snaps, x.start, x.kind === 'month' ? x.monthEnd : x.end).map((d) => ({ ...d, future: d.date > lastDate, partial: !!(d.v && d.date === today) }));
+    const overlay = !!(pr && r.kind !== 'prev' && valueMode() === 'diff' && chartType() === 'line');
+    const days = { cur: rows(r), prev: overlay ? rows(pr) : null, overlay, prevText: pr ? rangeText(pr) : '', kind: r.kind };
     return {
+      days,
       rangeText: rangeText(r), start: r.start, end: r.end, kind: r.kind,
       cmpText: cmp ? rangeText(cmp) : '', cmpLabel, cmpOk, fallback: !!g.fallback, baseDate: g.base ? g.base.date : '',
       status: g.status, note: g.status === 'ok' ? note(g) : '', metrics, articles, metric, metricLabel: SHORT[metric],
@@ -789,6 +847,6 @@ const PenPeriods = (() => {
   });
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (latest() && !$('#tab-overview').hidden) renderSummary(); }, 150); });
 
-  return { calc, picker, render, resolve, growth, buckets, sel, back: () => P.back, shareData, listMetric: () => P.listMetric };
+  return { calc, picker, render, resolve, growth, buckets, sel, back: () => P.back, shareData, listMetric: () => P.listMetric, rangeText };
 })();
 if (typeof module !== 'undefined') module.exports = PenPeriods;

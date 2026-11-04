@@ -4,7 +4,7 @@
  * ============================================================ */
 'use strict';
 
-const V = { view: 'cards', stage: 'entry', order: 'new', map: 'a', shown: 40, recheckAt: 0, rechecking: false };
+const V = { view: 'cards', stage: 'response', order: 'new', map: 'a', shown: 40, recheckAt: 0, rechecking: false };
 const RECENT_DAYS = 30;
 
 /* ---------- 共通 ---------- */
